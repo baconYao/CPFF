@@ -1,9 +1,9 @@
 /*
-*   user的structure
+*  
 *
 */ 
 
-#include "parameter.h"
+#include "../../configs/parameter.h"
 
 typedef struct userInfo {
   unsigned int globalWeight;    // 全域的weight

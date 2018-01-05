@@ -1,4 +1,4 @@
-#include "user_structure.h"
+#include "structure.h"
 
 /*
  * [初始化User Info]
