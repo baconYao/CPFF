@@ -1,16 +1,67 @@
 #include "structure.h"
 
 /**
+ * [建立host queue]
+ * @param {int} userNum [user的代號]
+ * @param {char*} qType [user queue的類型]
+ */
+ QUE *build_host_queue() {
+  printf("Host queue is building......\n");  
+  QUE *q = (QUE *) malloc(sizeof(QUE));
+  q -> head = q -> tail =NULL;
+  q -> size = 0;
+  return q;
+}
+
+/**
  * [建立user queue]
  * @param {int} userNum [user的代號]
  * @param {char*} qType [user queue的類型]
  */
-USER_QUE *build_user_queue(int userNum, char *qType) {
+ QUE *build_user_queue(int userNum, char *qType) {
   printf("User %d's %s queue is building......\n", userNum, qType);  
-  USER_QUE *q = (USER_QUE *) malloc(sizeof(USER_QUE));
+  QUE *q = (QUE *) malloc(sizeof(QUE));
   q -> head = q -> tail =NULL;
   q -> size = 0;
   return q;
+}
+
+/**
+ * [從尾端(tail)將request放進host Queue並轉換以Page為單位的requests]
+ * @param {QUE*} hostQ[整個系統的host queue]
+ * @param {REQ*} r [系統定義的Req pointer]
+ * return true [將trace所有的reuqests放入queue後即回傳]
+ */
+
+bool insert_req_to_host_que(QUE *hostQ, REQ *r) {
+  /*page_count代表此request共存取多少SSD page, 意思是將request切成多個sub-requests*/
+  int page_count;
+  page_count = r->reqSize/SSD_PAGE2SECTOR;
+  int i;
+  
+  for(i = 0; i < page_count; i++) {
+    if(hostQ->head == NULL) {            //第一個request
+      hostQ->head = calloc(1, sizeof(QUE_ITEM));
+      hostQ->tail = hostQ->head;
+      copyReq(r, &(hostQ->head->r));
+      hostQ->head->r.diskBlkno += i * SSD_PAGE2SECTOR;
+      hostQ->head->r.reqSize = SSD_PAGE2SECTOR;               //4096/512 = 8
+    } else {
+      QUE_ITEM *tmp;
+      tmp = calloc(1, sizeof(QUE_ITEM));
+      copyReq(r, &(tmp->r));
+      tmp->r.diskBlkno += i*SSD_PAGE2SECTOR;
+      tmp->r.reqSize = SSD_PAGE2SECTOR;
+      tmp->front_req = hostQ->tail;
+      hostQ->tail->back_req = tmp;
+      hostQ->tail = tmp;
+    }
+    hostQ->size++;
+  }
+  
+  // printf("Request: %lf %u %lu %u %u %u\n", r->arrivalTime, r->devno, r->diskBlkno, r->reqSize, r->reqFlag, r->userno);
+  totalRequests += page_count;
+  return true;
 }
 
 /**
@@ -32,14 +83,14 @@ bool insert_req_to_user_que(userInfo *user, char *qType, REQ *r) {
   if(!strcmp(qType, "SSD")) {               //此request屬於SSD
     for(i = 0; i < page_count; i++) {
       if(user[userno].ssdQueue->head == NULL) {            //第一個request
-        user[userno].ssdQueue->head = calloc(1, sizeof(USER_QUE_ITEM));
+        user[userno].ssdQueue->head = calloc(1, sizeof(QUE_ITEM));
         user[userno].ssdQueue->tail = user[userno].ssdQueue->head;
         copyReq(r, &(user[userno].ssdQueue->head->r));
         user[userno].ssdQueue->head->r.diskBlkno += i * SSD_PAGE2SECTOR;
         user[userno].ssdQueue->head->r.reqSize = SSD_PAGE2SECTOR;
       } else {
-        USER_QUE_ITEM *tmp;
-        tmp = calloc(1, sizeof(USER_QUE_ITEM));
+        QUE_ITEM *tmp;
+        tmp = calloc(1, sizeof(QUE_ITEM));
         copyReq(r, &(tmp->r));
         tmp->r.diskBlkno += i*SSD_PAGE2SECTOR;
         tmp->r.reqSize = SSD_PAGE2SECTOR;
@@ -51,14 +102,14 @@ bool insert_req_to_user_que(userInfo *user, char *qType, REQ *r) {
   } else {            //此request屬於HDD
     for(i = 0; i < page_count; i++) {
       if(user[userno].hddQueue->head == NULL) {            //第一個request
-        user[userno].hddQueue->head = calloc(1, sizeof(USER_QUE_ITEM));
+        user[userno].hddQueue->head = calloc(1, sizeof(QUE_ITEM));
         user[userno].hddQueue->tail = user[userno].hddQueue->head;
         copyReq(r, &(user[userno].hddQueue->head->r));
         user[userno].hddQueue->head->r.diskBlkno += i * SSD_PAGE2SECTOR;
         user[userno].hddQueue->head->r.reqSize = SSD_PAGE2SECTOR;
       } else {
-        USER_QUE_ITEM *tmp;
-        tmp = calloc(1, sizeof(USER_QUE_ITEM));
+        QUE_ITEM *tmp;
+        tmp = calloc(1, sizeof(QUE_ITEM));
         copyReq(r, &(tmp->r));
         tmp->r.diskBlkno += i*SSD_PAGE2SECTOR;
         tmp->r.reqSize = SSD_PAGE2SECTOR;
@@ -72,6 +123,32 @@ bool insert_req_to_user_que(userInfo *user, char *qType, REQ *r) {
   // printf("Request: %lf %u %lu %u %u %u\n", r->arrivalTime, r->devno, r->diskBlkno, r->reqSize, r->reqFlag, r->userno);
   totalRequests += page_count;
   return true;
+}
+
+/**
+ * [從頭端(head)將request移出Queue]
+ * @param {QUE*} Que[指定的queue]
+ */
+void remove_req_from_host_queue_head(QUE *Que) {
+  /*Que is empty, return nothing*/
+  if(is_empty_queue(Que)) {
+    return;  
+  }
+
+  QUE_ITEM *tmp = Que->head;
+  
+  /*Only one request in queue*/ 
+  if(Que->size == 1) {
+    Que->size--;
+    free(Queue->head);
+    Que->head = Q->tail = NULL;
+    return;
+  }
+
+  Que->head = Que->head->back_req;
+  Que->head->front_req = NULL;
+  free(tmp);
+  Que->size--;
 }
 
 /**
@@ -90,9 +167,39 @@ bool insert_req_to_user_que(userInfo *user, char *qType, REQ *r) {
 }
 
 /**
+ * [印出host的queue的內容]
+ */
+ void print_queue_content(QUE *Que) {
+	int i;
+	unsigned count;
+	QUE_ITEM *tmp;
+  count = 0;
+  tmp = Que->head;
+  printf("[Host QUEUE]\n");
+  while (tmp != NULL) {
+    count++;
+    printf("%6lu <-> ", tmp->r.diskBlkno);
+    tmp = tmp->back_req;
+  }
+  printf("NULL (%u)\n", count);
+}
+
+
+/**
  * [根據進入User queue的request數量，取得Request總數(應同於Trace筆數)]
  * @return {unsigned long} totalRequests [The num of requests]
  */
  unsigned long get_total_reqs() {
 	return totalRequests;
+}
+
+/**
+ * [檢查Queue是否為空]
+ */
+bool is_empty_queue(QUE *Que) {
+  if(Que->size > 0) {
+    return true;
+  }
+
+  return false;         // queue is empty
 }

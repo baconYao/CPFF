@@ -20,18 +20,26 @@ typedef struct req {
 } REQ;
 
 /*STRUCTURE DEFINITION:USER QUEUE*/
-typedef struct user_que_item {
-struct user_que_item *back_req;		//指向上一個(較晚進入)
+typedef struct que_item {
+struct que_item *back_req;		//指向上一個(較晚進入)
 REQ r;								            //REQUEST STRUCTURE
-struct user_que_item *front_req;	//指向下一個(較早進入)
-} USER_QUE_ITEM;
+struct que_item *front_req;	//指向下一個(較早進入)
+} QUE_ITEM;
 
-/*定義user queue的格式*/
-typedef struct user_que {
+// /*定義host queue的格式*/
+// typedef struct host_que {
+//   int size;               //此Queue內request的數量
+//   QUE_ITEM *head;		//指向佇列結構的頭
+//   QUE_ITEM *tail;		//指向佇列結構的尾
+// } HOST_QUE;
+
+
+/*定義queue的格式*/
+typedef struct que {
   int size;               //此Queue內request的數量
-  USER_QUE_ITEM *head;		//指向佇列結構的頭
-  USER_QUE_ITEM *tail;		//指向佇列結構的尾
-} USER_QUE;
+  QUE_ITEM *head;		//指向佇列結構的頭
+  QUE_ITEM *tail;		//指向佇列結構的尾
+} QUE;
 
 
 /*定義user的structure格式*/
@@ -51,17 +59,33 @@ typedef struct userInfo {
   double resTime;						//Response time for users
   double resTimeInPeriod;				//Response time for users in one period
   double cachingSpace;				//占用SSD的比例
-  USER_QUE *ssdQueue;
-  USER_QUE *hddQueue;
+  QUE *ssdQueue;
+  QUE *hddQueue;
 } userInfo;
 
 
+/*建立host的queue list*/
+QUE *build_host_queue();
+
 /*建立user的queue list*/
-USER_QUE *build_user_queue(int userNum, char *qType);
+QUE *build_user_queue(int userNum, char *qType);
+
+/*將request加入到host queue*/
+bool insert_req_to_host_que(QUE *hostQ, REQ *r);
+
+/*從queue的head端將request移出*/
+void remove_req_from_queue_head(QUE *Que);
 
 /*將request加入到user_queue*/
 bool insert_req_to_user_que(userInfo *user, char *qType, REQ *r);
 
+/*取得所有requests(sub-requests)的總數*/ 
 unsigned long get_total_reqs();
 
+/*將r的內容複製到copy*/ 
 void copyReq(REQ *r, REQ *copy);
+
+bool is_empty_queue(QUE *Que);
+
+/*印出queue的內容*/ 
+void print_queue_content(QUE *Que);
