@@ -1,3 +1,6 @@
+#ifndef STRUCTURE_H
+#define STRUCTURE_H
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -25,13 +28,6 @@ struct que_item *back_req;		//指向上一個(較晚進入)
 REQ r;								            //REQUEST STRUCTURE
 struct que_item *front_req;	//指向下一個(較早進入)
 } QUE_ITEM;
-
-// /*定義host queue的格式*/
-// typedef struct host_que {
-//   int size;               //此Queue內request的數量
-//   QUE_ITEM *head;		//指向佇列結構的頭
-//   QUE_ITEM *tail;		//指向佇列結構的尾
-// } HOST_QUE;
 
 
 /*定義queue的格式*/
@@ -89,3 +85,5 @@ bool is_empty_queue(QUE *Que);
 
 /*印出queue的內容*/ 
 void print_queue_content(QUE *Que);
+
+#endif

@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
 
   /*初始化*/ 
   initialize(&par[0]);
-  
+  prize_caching();
   
   // printf("%lu\n", get_total_reqs());
 

@@ -2,7 +2,6 @@
 
 /**
  * [建立host queue]
- * @param {int} userNum [user的代號]
  * @param {char*} qType [user queue的類型]
  */
  QUE *build_host_queue() {
@@ -140,8 +139,8 @@ void remove_req_from_host_queue_head(QUE *Que) {
   /*Only one request in queue*/ 
   if(Que->size == 1) {
     Que->size--;
-    free(Queue->head);
-    Que->head = Q->tail = NULL;
+    free(Que->head);
+    Que->head = Que->tail = NULL;
     return;
   }
 
