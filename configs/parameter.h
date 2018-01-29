@@ -2,7 +2,10 @@
 #define PARAMETER_H
 
 
-  #define CACHING_SPACE_MANAGER
+  /*選擇SSD Cache管理測略，一次只能選一個*/
+  #define STATIC_CACHING_SPACE
+  // #define DYNAMIC_CACHING_SPACE
+  // #define COMPETITION_CACHING_SPACE
 
 
   /*使用者人數，須根據trace的user去更改*/
@@ -36,17 +39,25 @@
 	#define MSG_TYPE_DISKSIM_2_SERVED 201	//The type of served message for HDD simulator
 	#define MSG_REQUEST_CONTROL_FLAG_FINISH 999		//The type of control message for simulator
 
+	/*cache*/
+	#define PAGE_FLAG_FREE 0		//The flag of free page in cache table 
+	#define PAGE_FLAG_NOT_FREE 1	//The flag of non-free page in cache table 
+	#define PAGE_FLAG_CLEAN 1		//The flag of clean page in cache table 
+	#define PAGE_FLAG_DIRTY -1		//The flag of dirty page in cache table 
+	#define CACHE_FULL 1		//The flag of cache means that cache is full
+	#define CACHE_NOT_FULL 0	//The flag of cache means that cache is not full
+
 
   /*prize caching*/
 	#define MIN_PRIZE 0.0		//The minimal prize in prize caching. It's a threshold which excludes data from cache
 	#define ALPHA 0.5			//The percentage of recency in the core function of prize caching
 
-  
+
   /*terminal output's color*/
-  #define RED_BOLD "\x1b[;31;1m"
-  #define BLU_BOLD "\x1b[;34;1m"
-  #define YEL_BOLD "\x1b[;33;1m"
-  #define GRN_BOLD "\x1b[;32;1m"
+  #define COLOR_RB "\x1b[;31;1m"  //紅色
+  #define COLOR_BB "\x1b[;34;1m"  //藍色
+  #define COLOR_YB "\x1b[;33;1m"  //黃色
+  #define COLOR_GB "\x1b[;32;1m"  //綠色
   #define CYAN_BOLD_ITALIC "\x1b[;36;1;3m"
   #define COLOR_RESET "\x1b[0;m"
 

@@ -5,10 +5,11 @@
  * @param {char*} qType [user queue的類型]
  */
  QUE *build_host_queue() {
-  printf("Host queue is building......\n");  
+  printf(COLOR_YB"Host queue is building..............");  
   QUE *q = (QUE *) malloc(sizeof(QUE));
   q -> head = q -> tail =NULL;
   q -> size = 0;
+  printf("OK\n"COLOR_RESET);    
   return q;
 }
 
@@ -18,10 +19,24 @@
  * @param {char*} qType [user queue的類型]
  */
  QUE *build_user_queue(int userNum, char *qType) {
-  printf("User %d's %s queue is building......\n", userNum, qType);  
+  printf(COLOR_YB"User %d's %s queue is building......", userNum, qType);  
   QUE *q = (QUE *) malloc(sizeof(QUE));
   q -> head = q -> tail =NULL;
   q -> size = 0;
+  printf("OK\n"COLOR_RESET);    
+  return q;
+}
+
+/**
+ * [建立device queue]
+ * @param {char*} qType [device queue的類型]
+ */
+ QUE *build_device_queue(char *qType) {
+  printf(COLOR_YB"%s Device queue is building......", qType);  
+  QUE *q = (QUE *) malloc(sizeof(QUE));
+  q -> head = q -> tail =NULL;
+  q -> size = 0;
+  printf("OK\n"COLOR_RESET);    
   return q;
 }
 
@@ -32,7 +47,7 @@
  * return true [將trace所有的reuqests放入queue後即回傳]
  */
 
-bool insert_req_to_host_que(QUE *hostQ, REQ *r) {
+bool insert_req_to_host_que_tail(QUE *hostQ, REQ *r) {
   /*page_count代表此request共存取多少SSD page, 意思是將request切成多個sub-requests*/
   int page_count;
   page_count = r->reqSize/SSD_PAGE2SECTOR;
@@ -69,7 +84,7 @@ bool insert_req_to_host_que(QUE *hostQ, REQ *r) {
  * @param {char*} qType [user queue的類型]
  * @param {REQ*} r [系統定義的Req pointer]
  */
-bool insert_req_to_user_que(userInfo *user, char *qType, REQ *r) {
+bool insert_req_to_user_que_tail(userInfo *user, char *qType, REQ *r) {
 
   // printf("User number: %u\n", r->userno);       //user number 1 ~ n
   unsigned userno = r->userno - 1;                 //user array從 0 ~ n-1
@@ -127,27 +142,38 @@ bool insert_req_to_user_que(userInfo *user, char *qType, REQ *r) {
 /**
  * [從頭端(head)將request移出Queue]
  * @param {QUE*} Que[指定的queue]
+ * @return {REQ}
  */
-void remove_req_from_host_queue_head(QUE *Que) {
+REQ *remove_req_from_queue_head(QUE *Que) {
+  // printf("Host queue's memory address: %p\n", &Que);
+  // printf("user num: %u\n", Que->head->r.userno);
+  // printf("user num: %u\n", Que->head->back_req->back_req->r.userno);
+  // printf("Que size %d\n", Que->size);
+  
   /*Que is empty, return nothing*/
   if(is_empty_queue(Que)) {
-    return;  
+    printf(CYAN_BOLD_ITALIC"Queue is empty!\n"COLOR_RESET);
+    return NULL;  
   }
 
   QUE_ITEM *tmp = Que->head;
-  
+  // REQ *r = (REQ *) malloc(sizeof(REQ));
+  // copyReq(&(tmp->r), r);
+  // printf("Req's: %u\n",tmp->r.userno);
+
   /*Only one request in queue*/ 
   if(Que->size == 1) {
     Que->size--;
-    free(Que->head);
+    // free(Que->head);
     Que->head = Que->tail = NULL;
-    return;
+    return &(tmp->r);
   }
 
   Que->head = Que->head->back_req;
   Que->head->front_req = NULL;
-  free(tmp);
+  // free(tmp);
   Que->size--;
+  return &(tmp->r);
 }
 
 /**
@@ -166,7 +192,7 @@ void remove_req_from_host_queue_head(QUE *Que) {
 }
 
 /**
- * [印出host的queue的內容]
+ * [印出queue的內容]
  */
  void print_queue_content(QUE *Que) {
 	int i;
@@ -174,7 +200,6 @@ void remove_req_from_host_queue_head(QUE *Que) {
 	QUE_ITEM *tmp;
   count = 0;
   tmp = Que->head;
-  printf("[Host QUEUE]\n");
   while (tmp != NULL) {
     count++;
     printf("%6lu <-> ", tmp->r.diskBlkno);
@@ -197,8 +222,8 @@ void remove_req_from_host_queue_head(QUE *Que) {
  */
 bool is_empty_queue(QUE *Que) {
   if(Que->size > 0) {
-    return true;
+    return false;
   }
 
-  return false;         // queue is empty
+  return true;         // queue is empty
 }

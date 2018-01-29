@@ -9,15 +9,25 @@
 #include "./../../configs/parameter.h"
 #include "./../../configs/structure.h"
 
+/* 選擇SSD Cache管理測略 */
+#ifdef STATIC_CACHING_SPACE
+  #include "./../caching_space_manager/static_caching_space.h"
+#elif defined DYNAMIC_CACHING_SPACE
+  #include "./../caching_space_manager/dynamic_caching_space.h"
+#elif defined COMPETITION_CACHING_SPACE
+  #include "./../caching_space_manager/compition_caching_space.h"
+#endif
+
+
 #define DISKSIM_READ 1
 #define DISKSIM_WRITE 0
 
 /*系統定義Base Prize*/
-#ifdef CACHING_SPACE_MANAGER
-  //維護每個user的base prize value 
-  static double basePrize[NUM_OF_USER];
+#ifdef COMPETITION_CACHING_SPACE
+  static int basePrize;
 #else
-  static double basePrize=0;
+  //維護每個user的base prize value 
+  static int basePrize[NUM_OF_USER];
 #endif
 
 /*STRUCTURE DRFINITION: METADATA BLOCK*/
@@ -60,7 +70,7 @@ static PCSTAT pcst = {0,0,0,0,0,0,0,0,0,0};
 unsigned long get_meta_cnt(int userno);
 
 /*初始化 Metadata table*/ 
-void init_meta_table();
+int init_meta_table();
 
 /*取得Metadata Block Prize*/
 double get_prize(unsigned int readCnt, unsigned int writeCnt, unsigned int seqLen, unsigned userno);
@@ -80,7 +90,6 @@ METABLOCK *meta_block_search_by_user(unsigned long diskBlk, unsigned userno);
 /*SEARCH METADATA BLOCK TABLE FOR USER WITH MINIMAL PRIZE*/
 double meta_block_search_by_user_with_min_prize(unsigned userno);
 
-
-void prize_caching();
+double prize_caching(REQ *tmp, double time, userInfo *user, QUE *hostQueue);
 
 #endif

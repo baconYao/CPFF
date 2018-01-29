@@ -20,18 +20,22 @@ unsigned long get_meta_cnt(int userNum) {
 
 /**
  * [初始化 Metadata table]
+ * @return {int} 0 default success
  */
-void init_meta_table() {
+int init_meta_table() {
+  printf(COLOR_BB"PC metablock table is initializing........");  
   unsigned i; //For loop
   //Initialize metadata table
   for (i = 0; i < NUM_OF_USER; i++) {
-      metaTable[i] = NULL;
-      #ifdef CACHING_SPACE_MANAGER
-          basePrize[i] = 0;
-      #else
-          basePrize = 0;
-      #endif
+    metaTable[i] = NULL;
+    #ifdef COMPETITION_CACHING_SPACE
+      basePrize = 0;
+    #else
+      basePrize[i] = 0;
+    #endif
   }
+  printf("OK\n"COLOR_RESET);
+  return 0;
 }
 
 
@@ -44,10 +48,10 @@ void init_meta_table() {
  */
 double get_prize(unsigned int readCnt, unsigned int writeCnt, unsigned int seqLen, unsigned userno) {
   //Calculate and return prize value
-  #ifdef CACHING_SPACE_MANAGER
-    return (ALPHA*(((double)readCnt+1)/((double)writeCnt*(double)seqLen+1))+(1-ALPHA)*basePrize[userno-1]);
-  #else
+  #ifdef COMPETITION_CACHING_SPACE
     return (ALPHA*(((double)readCnt+1)/((double)writeCnt*(double)seqLen+1))+(1-ALPHA)*basePrize);
+  #else
+    return (ALPHA*(((double)readCnt+1)/((double)writeCnt*(double)seqLen+1))+(1-ALPHA)*basePrize[userno-1]);
   #endif
 }
 
@@ -117,7 +121,7 @@ METABLOCK *add_meta_block_to_table(REQ *tmp) {
   search->prize = get_prize(search->readCnt, search->writeCnt, search->seqLen, userNum);
 
   //Insert metadata into metadata table
-  #ifdef CACHING_SPACE_MANAGER
+  #ifdef STATIC_CACHING_SPACE
     //Maintain the individual metadata tables
     search->next = metaTable[userNum-1];
     metaTable[userNum-1] = search;
@@ -137,15 +141,15 @@ METABLOCK *add_meta_block_to_table(REQ *tmp) {
 void meta_table_print() {
   METABLOCK *search;
   unsigned i;
-  printf(GRN_BOLD);
+  printf(COLOR_GB);
   printf("----------------------------------------------------------------------------------------------------\n");
   for (i = 0; i < NUM_OF_USER; i++) {
     search = metaTable[i];
     
     printf("-[USER_%u METADATA BLOCK TABLE]\n", i+1);
     while(search != NULL) {
-        printf("-   [PRIZE] blkno =%8lu readCnt =%6u writeCnt =%6u seqLen =%3u *prize =%3lf\n", search->blkno, search->readCnt, search->writeCnt, search->seqLen, search->prize);
-        search = search->next;
+      printf("-   [PRIZE] blkno =%8lu readCnt =%6u writeCnt =%6u seqLen =%3u *prize =%3lf\n", search->blkno, search->readCnt, search->writeCnt, search->seqLen, search->prize);
+      search = search->next;
     }
     printf("----------------------------------------------------------------------------------------------------\n");
     printf(COLOR_RESET);
@@ -162,12 +166,12 @@ void meta_table_print() {
 METABLOCK *meta_block_search_by_user(unsigned long diskBlk, unsigned userno) {
   //Determine which metadata table used in this function
   //Hint: unum is a substitute for different modes
-  #ifdef CACHING_SPACE_MANAGER
-    //Individual metadata tables
-    unsigned unum = userno;
-  #else
+  #ifdef COMPETITION_CACHING_SPACE
     //All metadatas in one table by index:0
     unsigned unum = 1;
+  #else
+    //Individual metadata tables
+    unsigned unum = userno;
   #endif
 
   //Assign the metadata table which pc searches
@@ -200,12 +204,12 @@ METABLOCK *meta_block_search_by_user(unsigned long diskBlk, unsigned userno) {
 double metadata_search_by_user_with_min_prize(unsigned userno) {
   //Determine which metadata table used in this function
   //Hint: unum is a substitute for different modes
-  #ifdef CACHING_SPACE_MANAGER
-    //Individual metadata tables
-    unsigned unum = userno;
-  #else
+  #ifdef COMPETITION_CACHING_SPACE
     //All metadatas in one table by index:0
     unsigned unum = 1;
+  #else
+    //Individual metadata tables
+    unsigned unum = userno;
   #endif
 
   //Assign the metadata table which pc searches
@@ -245,6 +249,50 @@ double metadata_search_by_user_with_min_prize(unsigned userno) {
 }
 
 
-void prize_caching() {
-  printf("Prize!!!!!\n");
+/**
+ * [根據欲處理的Request，決定系統的快取機制，並決定此request是否有額外的I/O request(即system request) ]
+ * @param @param {REQ} tmp [欲處理的Request]
+ * @return {double} service [完成tmp的Service Time(注意!!此時間包含系統Request的Service Time)]
+ */
+double prize_caching(REQ *tmp2, double time, userInfo *user, QUE *hostQueue) {
+
+  int flag = 0;           //The flag of page
+
+  // printf("Host queue's memory address: %p\n", &hostQueue);
+  // printf("user num: %u\n", hostQueue->head->r.userno);
+  // printf("user num: %u\n", hostQueue->head->back_req->back_req->r.userno);
+  // printf("Que size %d\n", hostQueue->size);
+  
+
+  REQ *tmp;
+  while((tmp = remove_req_from_queue_head(hostQueue)) != NULL) {
+    
+    //Check the type of request
+    if (tmp->reqFlag == DISKSIM_READ) {
+      flag = PAGE_FLAG_CLEAN;
+      //Statistics
+      // pcst.UserRReq++;
+      user[tmp->userno-1].UserRReq++;
+      // sysst.UserRReq++;
+    }
+    else {
+      flag = PAGE_FLAG_DIRTY;
+      user[tmp->userno-1].UserWReq++;      
+    }
+
+    /*搜尋是否有被cache*/
+    SSD_CACHE *cache;
+    cache = search_cache_by_user(tmp->diskBlkno, tmp->userno);
+
+    /*cache hit*/
+    if(cache != NULL) {
+      pcst.hitCount++;
+      user[tmp->userno-1].hitCount++;
+    }
+  }
+
+  return 0.0;
+
 }
+
+
