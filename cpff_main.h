@@ -9,12 +9,12 @@
 #include "cpff_prize_caching.h"
 
 /* 選擇SSD Cache管理測略 */
-#ifdef CPFF_STATIC_CACHING_SPACE
+#ifdef STATIC_CACHING_SPACE
   #include "cpff_static_caching_space.h"
-#elif defined CPFF_DYNAMIC_CACHING_SPACE
+#elif defined DYNAMIC_CACHING_SPACE
   #include "cpff_dynamic_caching_space.h"
-#elif defined CPFF_COMPETITION_CACHING_SPACE
-  #include "cpff_compition_caching_space.h"
+#elif defined COMPETITION_CACHING_SPACE
+  #include "cpff_competition_caching_space.h"
 #endif
 
 #include "cpff_ipc.h"

@@ -19,10 +19,10 @@ int init_user_cache(userInfo *user) {
   }
 
   if (totalWeight == 0){
-    print_error(0, "[USER CACHE] Total User Weight = ");
+    print_error(0, "[static_caching_space.c] Total User Weight = ");
   }
 
-  #ifdef CPFF_STATIC_CACHING_SPACE
+  #ifdef STATIC_CACHING_SPACE
     unsigned long startPage = 0;
     for (i = 0; i < NUM_OF_USER; i++) {
       userCacheStart[i] = startPage;
@@ -31,13 +31,13 @@ int init_user_cache(userInfo *user) {
       startPage += userCacheSize[i];
     }
       
-    printf(COLOR_GB" [USER CACHE] Total User Weight:%u, Total Cache Size(Pages):%u\n"COLOR_RESET, totalWeight, SSD_CACHING_SPACE_BY_PAGES);
+    printf(COLOR_GB" [static_caching_space.c] Total User Weight:%u, Total Cache Size(Pages):%u\n"COLOR_RESET, totalWeight, SSD_CACHING_SPACE_BY_PAGES);
 
     for (i = 0; i < NUM_OF_USER; i++) {
-      printf(COLOR_GB" [USER CACHE] User%u: Weight:%u Start(Pages):%lu, Size(Pages):%lu\n"COLOR_RESET, i+1, user[i].globalWeight, userCacheStart[i], userCacheSize[i]);
+      printf(COLOR_GB" [static_caching_space.c] User%u: Weight:%u Start(Pages):%lu, Size(Pages):%lu\n"COLOR_RESET, i+1, user[i].globalWeight, userCacheStart[i], userCacheSize[i]);
     }
   #else
-    print_error(0, "[USER CACHE] You should define CPFF_STATIC_CACHING_SPACE at parameter.h file ");
+    print_error(0, "[static_caching_space.c] You should define STATIC_CACHING_SPACE at parameter.h file ");
   #endif
 
   for (i = 0; i < NUM_OF_USER; i++) {
@@ -101,7 +101,7 @@ SSD_CACHE *insert_cache_by_user(unsigned long diskBlk, int reqFlag, unsigned use
         ssdCache[search->pageno].dirtyFlag = reqFlag;
         break;
       default:
-        print_error(reqFlag, "[USER CACHE]Caching Error with unknown flag:");
+        print_error(reqFlag, "[static_caching_space.c]Caching Error with unknown flag:");
         break;
     }
 
@@ -211,7 +211,7 @@ unsigned long get_free_cache_by_user(unsigned userno) {
       return pageno;
     }
   }
-  print_error(-1, "[USER CACHE]Get an invalid free Page number in User Cache");
+  print_error(-1, "[static_caching_space.c]Get an invalid free Page number in User Cache");
   //If return this means "NO FREE PAGE"!
   return pageno;
 }
@@ -224,7 +224,7 @@ void print_cache_by_LRU_and_users() {
   unsigned i;
   unsigned long pageno;
   for (i = 0; i < NUM_OF_USER; i++) {
-    printf("[USER CACHE %u]--", i+1);
+    printf("[static_caching_space.c %u]--", i+1);
       
     for (pageno = userCacheStart[i]; pageno < userCacheStart[i]+userCacheSize[i]; pageno++) {
       if (ssdCache[pageno].freeFlag == PAGE_FLAG_NOT_FREE) {
@@ -251,8 +251,8 @@ unsigned long get_cache_cnt() {
  */
 void cache_write_result_file(FILE **result, userInfo *user) {
   unsigned i;
-  fprintf(*result, "[USER CACHE] Total User Weight:%u, Total Cache Size(Pages):%u\n", totalWeight, SSD_CACHING_SPACE_BY_PAGES);
+  fprintf(*result, "[static_caching_space.c] Total User Weight:%u, Total Cache Size(Pages):%u\n", totalWeight, SSD_CACHING_SPACE_BY_PAGES);
   for (i = 0; i < NUM_OF_USER; i++) {
-    fprintf(*result, "[USER CACHE] User%u: Weight:%u Start(Pages):%lu, Size(Pages):%lu\n", i+1, user[i].globalWeight, userCacheStart[i], userCacheSize[i]);
+    fprintf(*result, "[static_caching_space.c] User%u: Weight:%u Start(Pages):%lu, Size(Pages):%lu\n", i+1, user[i].globalWeight, userCacheStart[i], userCacheSize[i]);
   }
 }

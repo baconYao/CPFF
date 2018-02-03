@@ -28,7 +28,7 @@ int init_meta_table() {
   //Initialize metadata table
   for (i = 0; i < NUM_OF_USER; i++) {
     metaTable[i] = NULL;
-    #ifdef CPFF_COMPETITION_CACHING_SPACE
+    #ifdef COMPETITION_CACHING_SPACE
       basePrize = 0;
     #else
       basePrize[i] = 0;
@@ -48,7 +48,7 @@ int init_meta_table() {
  */
 double get_prize(unsigned int readCnt, unsigned int writeCnt, unsigned int seqLen, unsigned userno) {
   //Calculate and return prize value
-  #ifdef CPFF_COMPETITION_CACHING_SPACE
+  #ifdef COMPETITION_CACHING_SPACE
     return (ALPHA*(((double)readCnt+1)/((double)writeCnt*(double)seqLen+1))+(1-ALPHA)*basePrize);
   #else
     return (ALPHA*(((double)readCnt+1)/((double)writeCnt*(double)seqLen+1))+(1-ALPHA)*basePrize[userno-1]);
@@ -166,7 +166,7 @@ void meta_table_print() {
 METABLOCK *meta_block_search_by_user(unsigned long diskBlk, unsigned userno) {
   //Determine which metadata table used in this function
   //Hint: unum is a substitute for different modes
-  #ifdef CPFF_COMPETITION_CACHING_SPACE
+  #ifdef COMPETITION_CACHING_SPACE
     //All metadatas in one table by index:0
     unsigned unum = 1;
   #else
@@ -204,7 +204,7 @@ METABLOCK *meta_block_search_by_user(unsigned long diskBlk, unsigned userno) {
 double metadata_search_by_user_with_min_prize(unsigned userno) {
   //Determine which metadata table used in this function
   //Hint: unum is a substitute for different modes
-  #ifdef CPFF_COMPETITION_CACHING_SPACE
+  #ifdef COMPETITION_CACHING_SPACE
     //All metadatas in one table by index:0
     unsigned unum = 1;
   #else

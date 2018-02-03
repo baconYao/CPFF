@@ -3,9 +3,9 @@
 
 
   /*選擇SSD Cache管理測略，一次只能選一個*/
-  #define CPFF_STATIC_CACHING_SPACE
-  // #define CPFF_DYNAMIC_CACHING_SPACE
-  // #define CPFF_COMPETITION_CACHING_SPACE
+  #define STATIC_CACHING_SPACE
+  // #define DYNAMIC_CACHING_SPACE
+  // #define COMPETITION_CACHING_SPACE
 
 
   /*使用者人數，須根據trace的user去更改*/

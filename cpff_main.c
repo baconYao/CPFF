@@ -83,6 +83,15 @@ char *par[6];         //CPFF system arguments
  * [系統初始化]
  */
 void initialize(char *par[]) {
+
+  #ifdef STATIC_CACHING_SPACE
+    printf("Caching Space Policy: STATIC_CACHING_SPACE\n");
+  #elif defined DYNAMIC_CACHING_SPACE
+    printf("Caching Space Policy: DYNAMIC_CACHING_SPACE\n");
+  #elif defined COMPETITION_CACHING_SPACE
+    printf("Caching Space Policy: COMPETITION_CACHING_SPACE\n");
+  #endif
+
   //Open trace file
   trace = fopen(par[0], "r");
   if (!trace) {

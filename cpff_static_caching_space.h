@@ -1,11 +1,11 @@
 #ifndef CPFF_STATIC_CACHING_SPACE_H
 #define CPFF_STATIC_CACHING_SPACE_H
 
-#include <stdlib.h>
-#include <stdio.h>
-#include "cpff_parameter.h"
-#include "cpff_structure.h"
-#include "cpff_prize_caching.h"
+	#include <stdlib.h>
+	#include <stdio.h>
+	#include "cpff_parameter.h"
+	#include "cpff_structure.h"
+	#include "cpff_prize_caching.h"
 
 	/*STRUCTURE DEFINITION: SSD CACHE*/
 	typedef struct SSD_cache {
