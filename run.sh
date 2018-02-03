@@ -27,4 +27,4 @@ trace='t1'
 
 echo "# Multi-user"
 #./yusim "./../../yusim_trace/${traceU2}.yt" $ssd_parv $ssdout $hdd_parv $hddout "./output/${traceU2}_${cache}.stat" "./output/${traceU2}_${cache}.result"
-./main.o "trace/${trace}.tr"
+./cpff_main.o "trace/${trace}.tr"
