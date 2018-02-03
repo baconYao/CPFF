@@ -13,70 +13,70 @@ char *par[6];         //CPFF system arguments
  * [Disksim的初始化，利用兩個Process各自執行Disksim，作為SSDsim和HDDsim，
  * 接續MESSAGE QUEUE INITIALIZATION]
  */
-//  void init_disksim() {
-//   pid_t procid;
-//   //Fork process to execute SSD simulator
-//   procid = fork();
-//   if (procid == 0) {
-//     SSDsimProc = getpid();
-//     //printf("SSDsimProc ID: %d\n", SSDsimProc);
-//     exec_SSDsim("SSDsim", par[1], par[2]);
-//     exit(0);
-//   }
-//   else if (procid < 0) {
-//     PrintError(-1, "SSDsim process fork() error");
-//     exit(1);
-//   }
+void init_disksim() {
+  pid_t procid;
+  //Fork process to execute SSD simulator
+  procid = fork();
+  if (procid == 0) {
+    SSDsimProc = getpid();
+    //printf("SSDsimProc ID: %d\n", SSDsimProc);
+    exec_SSDsim("SSDsim", par[1], par[2]);
+    exit(0);
+  }
+  else if (procid < 0) {
+    print_error(-1, "SSDsim process fork() error");
+    exit(1);
+  }
 
-//   //Fork process to execute HDD simulator
-//   procid = fork();
-//   if (procid == 0) {
-//     HDDsimProc = getpid();
-//     //printf("HDDsimProc ID: %d\n", HDDsimProc);
-//     exec_HDDsim("HDDsim", par[3], par[4]);
-//     exit(0);
-//   }
-//   else if (procid < 0) {
-//     PrintError(-1, "HDDsim process fork() error");
-//     exit(1);
-//   }
+  //Fork process to execute HDD simulator
+  procid = fork();
+  if (procid == 0) {
+    HDDsimProc = getpid();
+    //printf("HDDsimProc ID: %d\n", HDDsimProc);
+    exec_HDDsim("HDDsim", par[3], par[4]);
+    exit(0);
+  }
+  else if (procid < 0) {
+    print_error(-1, "HDDsim process fork() error");
+    exit(1);
+  }
 
-//   //After the initialization of simulators, initialize message queue
-//   init_MSQ();
-// }
+  //After the initialization of simulators, initialize message queue
+  init_MSQ();
+}
 
 /**
  * [Disksim的關閉，傳送Control message告知其Process進行Shutdown，並等待回傳結果message]
  */
-//  void rm_disksim() {
-//   REQ *ctrl, *ctrl_rtn;
-//   ctrl = calloc(1, sizeof(REQ));
-//   ctrl_rtn = calloc(1, sizeof(REQ));      //Receive message after control message
-//   ctrl->reqFlag = MSG_REQUEST_CONTROL_FLAG_FINISH; //Assign a finish flag (ipc)
+void rm_disksim() {
+  REQ *ctrl, *ctrl_rtn;
+  ctrl = calloc(1, sizeof(REQ));
+  ctrl_rtn = calloc(1, sizeof(REQ));      //Receive message after control message
+  ctrl->reqFlag = MSG_REQUEST_CONTROL_FLAG_FINISH; //Assign a finish flag (ipc)
   
-//   //Send a control message to finish SSD simulator
-//   send_finish_control(KEY_MSQ_DISKSIM_1, MSG_TYPE_DISKSIM_1);
+  //Send a control message to finish SSD simulator
+  send_finish_control(KEY_MSQ_DISKSIM_1, MSG_TYPE_DISKSIM_1);
 
-//   //Receive the last message from SSD simulator
-//   if(recv_request_by_MSQ(KEY_MSQ_DISKSIM_1, ctrl_rtn, MSG_TYPE_DISKSIM_1_SERVED) == -1) {
-//     PrintError(-1, "A served request not received from MSQ in recvRequestByMSQ():");
-//   }
-//   // printf(COLOR_YB"[YUSIM]SSDsim response time = %lf\n"COLOR_N, ctrl_rtn->responseTime);
-//   // fprintf(result, "[YUSIM]SSDsim response time = %lf\n", ctrl_rtn->responseTime);
+  //Receive the last message from SSD simulator
+  if(recv_request_by_MSQ(KEY_MSQ_DISKSIM_1, ctrl_rtn, MSG_TYPE_DISKSIM_1_SERVED) == -1) {
+    print_error(-1, "A served request not received from MSQ in recvRequestByMSQ():");
+  }
+  // printf(COLOR_YB"[YUSIM]SSDsim response time = %lf\n"COLOR_N, ctrl_rtn->responseTime);
+  // fprintf(result, "[YUSIM]SSDsim response time = %lf\n", ctrl_rtn->responseTime);
 
-//   //Send a control message to finish HDD simulator
-//   // sendFinishControl(KEY_MSQ_DISKSIM_2, MSG_TYPE_DISKSIM_2);
+  //Send a control message to finish HDD simulator
+  // sendFinishControl(KEY_MSQ_DISKSIM_2, MSG_TYPE_DISKSIM_2);
 
-//   //Receive the last message from HDD simulator
-//   if(recv_request_by_MSQ(KEY_MSQ_DISKSIM_2, ctrl_rtn, MSG_TYPE_DISKSIM_2_SERVED) == -1) {
-//     PrintError(-1, "A served request not received from MSQ in recvRequestByMSQ():");
-//   }
-//   // printf(COLOR_YB"[YUSIM]HDDsim response time = %lf\n"COLOR_N, ctrl_rtn->responseTime);
-//   // fprintf(result, "[YUSIM]HDDsim response time = %lf\n", ctrl_rtn->responseTime);
+  //Receive the last message from HDD simulator
+  if(recv_request_by_MSQ(KEY_MSQ_DISKSIM_2, ctrl_rtn, MSG_TYPE_DISKSIM_2_SERVED) == -1) {
+    print_error(-1, "A served request not received from MSQ in recvRequestByMSQ():");
+  }
+  // printf(COLOR_YB"[YUSIM]HDDsim response time = %lf\n"COLOR_N, ctrl_rtn->responseTime);
+  // fprintf(result, "[YUSIM]HDDsim response time = %lf\n", ctrl_rtn->responseTime);
 
-//   //After that, remove message queues
-//   rm_MSQ();
-// }
+  //After that, remove message queues
+  rm_MSQ();
+}
 
 
 /**
@@ -85,12 +85,16 @@ char *par[6];         //CPFF system arguments
 void initialize(char *par[]) {
 
   #ifdef STATIC_CACHING_SPACE
-    printf("Caching Space Policy: STATIC_CACHING_SPACE\n");
+    printf(COLOR_RB"Caching Space Policy: STATIC_CACHING_SPACE\n"COLOR_RESET);
   #elif defined DYNAMIC_CACHING_SPACE
-    printf("Caching Space Policy: DYNAMIC_CACHING_SPACE\n");
+    printf(COLOR_RB"Caching Space Policy: DYNAMIC_CACHING_SPACE\n"COLOR_RESET);
   #elif defined COMPETITION_CACHING_SPACE
-    printf("Caching Space Policy: COMPETITION_CACHING_SPACE\n");
+    printf(COLOR_RB"Caching Space Policy: COMPETITION_CACHING_SPACE\n"COLOR_RESET);
   #endif
+  
+  /*初始化 HDDsim & SSDsim*/
+  init_disksim();
+  sleep(3);
 
   //Open trace file
   trace = fopen(par[0], "r");
@@ -133,16 +137,15 @@ void initialize(char *par[]) {
   ssdDeviceQueue = build_device_queue("SSD");
   hddDeviceQueue = build_device_queue("HDD");
 
-  /*初始化 user cache space*/
-  if(init_user_cache(user) != 0) {
-    print_error(-1, "Can't build user cache!");
-  }
-
   /*初始化 PC metablock table*/
   if(init_meta_table() != 0) {
     print_error(-1, "Can't build user cache!");
   }
 
+  /*初始化 user cache space*/
+  if(init_user_cache(user) != 0) {
+    print_error(-1, "Can't build user cache!");
+  }
   
   /*讀取trace file requests*/ 
   REQ *tmp;
@@ -169,15 +172,26 @@ void initialize(char *par[]) {
 
 
 int main(int argc, char *argv[]) {
+
+  //Check arguments
+	if (argc != 8) {
+    fprintf(stderr, "usage: %s <Trace file> <param file for SSD> <output file for SSD> <param file for HDD> <output file for HDD> <output file for STAT> <output file for result>\n", argv[0]);
+    exit(1);
+  }
+
   /*系統起始訊息*/ 
-  printf(CYAN_BOLD_ITALIC"CPFF is running.....\n"COLOR_RESET);
+  printf(CYAN_BOLD_ITALIC"CPFF is running.....\n\n"COLOR_RESET);
 
   par[0] = argv[1];         //trace file path
+  par[1] = argv[2];         
+  par[2] = argv[3];
+  par[3] = argv[4];
+  par[4] = argv[5];
+  par[5] = argv[6];
+  par[6] = argv[7];
 
   /*初始化*/ 
   initialize(&par[0]);
-
-
 
 
   double k = prize_caching(NULL, 0, user, hostQueue);
@@ -188,6 +202,16 @@ int main(int argc, char *argv[]) {
     printf("User %d Read req: %lu\n", i+1, user[i].UserRReq);
     printf("User %d Write req: %lu\n", i+1, user[i].UserWReq);
   }
+
+
+  // Waiting for SSDsim and HDDsim process
+  wait(NULL);
+  wait(NULL);
+   //OR
+  //printf("Main Process waits for: %d\n", wait(NULL));
+  //printf("Main Process waits for: %d\n", wait(NULL));
+
+
 
   return 0;
 }

@@ -5,11 +5,11 @@
  * @param {char*} qType [user queue的類型]
  */
  QUE *build_host_queue() {
-  printf(COLOR_YB"Host queue is building..............");  
+  printf(COLOR_RESET"Host queue is building..............");  
   QUE *q = (QUE *) malloc(sizeof(QUE));
   q -> head = q -> tail =NULL;
   q -> size = 0;
-  printf("OK\n"COLOR_RESET);    
+  printf("OK\n");    
   return q;
 }
 

@@ -5,7 +5,7 @@
  * @param {char*} str [顯示字串]
  */
 void print_something(char* str) {
-    printf(COLOR_YB"[DEBUG]%s\n"COLOR_RESET, str);
+    printf(CYAN_BOLD_ITALIC"[DEBUG]%s\n"COLOR_RESET, str);
 }
 
 /**

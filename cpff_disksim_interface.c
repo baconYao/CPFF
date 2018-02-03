@@ -132,7 +132,7 @@ void exec_SSDsim(char *name, const char *parm_file, const char *output_file) {
 			}
 			
 			disksim_interface_shutdown(disksim, now);
-			printf(COLOR_YB"[SSDSIM]System Time:%lf, Pending IO Requests:%lu, Served IO Requests:%lu\n"COLOR_N, st.stime, st.pendIORequest, st.servedIORequest);
+			printf(COLOR_YB"[SSDSIM]System Time:%lf, Pending IO Requests:%lu, Served IO Requests:%lu\n"COLOR_RESET, st.stime, st.pendIORequest, st.servedIORequest);
 			print_something("<<<<<[SSDSIM] Shutdown!");
 			exit(0);
 		}
@@ -233,7 +233,7 @@ void exec_HDDsim(char *name, const char *parm_file, const char *output_file) {
 				}
 				
 				disksim_interface_shutdown(disksim, now);
-				printf(COLOR_YB"[HDDSIM]System Time:%lf, Pending IO Requests:%lu, Served IO Requests:%lu\n"COLOR_N, st.stime, st.pendIORequest, st.servedIORequest);
+				printf(COLOR_YB"[HDDSIM]System Time:%lf, Pending IO Requests:%lu, Served IO Requests:%lu\n"COLOR_RESET, st.stime, st.pendIORequest, st.servedIORequest);
 				print_something("<<<<<[HDDSIM] Shutdown!");
 				exit(0);
 		} 
