@@ -8,6 +8,7 @@ pid_t SSDsimProc, HDDsimProc;     //Sub-process id: SSD and HDD simulator
 
 FILE *trace;          //讀取的trace
 char *par[6];         //CPFF system arguments
+int totalWeight = 0;
 
 /**
  * [Disksim的初始化，利用兩個Process各自執行Disksim，作為SSDsim和HDDsim，
@@ -92,6 +93,12 @@ void initialize(char *par[]) {
     printf(COLOR_RB"Caching Space Policy: COMPETITION_CACHING_SPACE\n"COLOR_RESET);
   #endif
   
+  #ifdef STATIC_CREDIT
+    printf(COLOR_RB"Credit Policy: STATIC_CREDIT\n"COLOR_RESET);
+  #elif defined DYNAMIC_CREDIT
+    printf(COLOR_RB"Credit Policy: DYNAMIC_CREDIT\n"COLOR_RESET);
+  #endif
+
   /*初始化 HDDsim & SSDsim*/
   init_disksim();
   sleep(3);
@@ -131,6 +138,8 @@ void initialize(char *par[]) {
     user[i].resTime = 0;
     user[i].resTimeInPeriod = 0;
     user[i].cachingSpace = 0;
+
+    totalWeight += weight;              //累加所有user的globalWeight
   }
 
   /*建立device queue*/
@@ -143,10 +152,15 @@ void initialize(char *par[]) {
   }
 
   /*初始化 user cache space*/
-  if(init_user_cache(user) != 0) {
+  if(init_user_cache(user, totalWeight) != 0) {
     print_error(-1, "Can't build user cache!");
   }
   
+  /*初始化 user credit*/  
+  if(init_credit(user, totalWeight) != 0) {
+    print_error(-1, "Can't initialize user credit!");
+  }
+
   /*讀取trace file requests*/ 
   REQ *tmp;
   tmp = calloc(1, sizeof(REQ));

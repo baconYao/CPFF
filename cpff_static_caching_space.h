@@ -35,7 +35,7 @@
 	static unsigned long userCacheCount[NUM_OF_USER];
 
 	/*USER CACHE INITIALIZATION*/
-	int init_user_cache(userInfo *user);
+	int init_user_cache(userInfo *user, int totalWeight);
 
 	// /*INSERT CACHE TABLE BY USER*/
 	SSD_CACHE *insert_cache_by_user(unsigned long diskBlk, int reqFlag, unsigned userno, double time, struct metaBlock *meta, userInfo *user);
@@ -59,6 +59,6 @@
 	unsigned long get_cache_cnt();
 
 	// /*寫檔至 Result File*/
-	void cache_write_result_file(FILE **result, userInfo *user);
+	void cache_write_result_file(FILE **result, userInfo *user, int totalWeight);
 	
 #endif

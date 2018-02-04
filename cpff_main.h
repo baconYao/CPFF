@@ -17,5 +17,12 @@
   #include "cpff_competition_caching_space.h"
 #endif
 
+/* 選擇Credit管理測略 */
+#ifdef STATIC_CREDIT
+  #include "cpff_static_credit.h"
+#elif defined DYNAMIC_CREDIT
+  #include "cpff_dynamic_credit.h"
+#endif
+
 #include "cpff_ipc.h"
 #include "cpff_debug.h"

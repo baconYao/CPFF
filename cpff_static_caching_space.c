@@ -11,13 +11,9 @@
  * [針對Trace指定不同User權重所占用的空間]
  * @return {int} 0/-1 []
  */
-int init_user_cache(userInfo *user) {
-  totalWeight = 0;
+int init_user_cache(userInfo *user, int totalWeight) {
   unsigned i;
-  for (i = 0; i < NUM_OF_USER; i++) {
-    totalWeight += user[i].globalWeight;
-  }
-
+  
   if (totalWeight == 0){
     print_error(0, "[static_caching_space.c] Total User Weight = ");
   }
@@ -249,7 +245,7 @@ unsigned long get_cache_cnt() {
  * [寫檔至 Result File]
  * @param {FILE*} st [寫檔Pointer]
  */
-void cache_write_result_file(FILE **result, userInfo *user) {
+void cache_write_result_file(FILE **result, userInfo *user, int totalWeight) {
   unsigned i;
   fprintf(*result, "[static_caching_space.c] Total User Weight:%u, Total Cache Size(Pages):%u\n", totalWeight, SSD_CACHING_SPACE_BY_PAGES);
   for (i = 0; i < NUM_OF_USER; i++) {

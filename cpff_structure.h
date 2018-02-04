@@ -11,8 +11,6 @@
   /*計算進入User queue的request數量，取得Request總數(應同於Trace筆數)*/
   static unsigned long totalRequests = 0;
 
-  unsigned int totalWeight;
-
   /*定義request的格式*/
   typedef struct req {
     double arrivalTime;		//抵達時間

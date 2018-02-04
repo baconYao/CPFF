@@ -2,11 +2,14 @@
 #define CPFF_PARAMETER_H
 
 
-  /*選擇SSD Cache管理測略，一次只能選一個*/
+  /*選擇SSD Cache Space管理測略(一次只能選一個)*/
   #define STATIC_CACHING_SPACE
   // #define DYNAMIC_CACHING_SPACE
   // #define COMPETITION_CACHING_SPACE
 
+  /*選擇Credit管理測略(一次只能選一個)*/
+  #define STATIC_CREDIT
+  // #define DYNAMIC_CREDIT
 
   /*使用者人數，須根據trace的user去更改*/
   #define NUM_OF_USER 2
@@ -41,6 +44,11 @@
   
   
 	#define SSD_N_ELEMENTS 1 //SSD Channels //No multi channel
+
+  #define TIME_PERIOD 1000 //ms  //VSSD uses 1000.0
+
+  /*credit*/
+	#define INIT_CREDIT (TIME_PERIOD*SSD_N_ELEMENTS)		//The initial credit
 
 
 	/*ipc*/

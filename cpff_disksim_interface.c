@@ -89,7 +89,7 @@ void hddsim_report_completion(SysTime t, struct disksim_request *r, void *ctx) {
 }
 
 void exec_SSDsim(char *name, const char *parm_file, const char *output_file) {
-	printf("[SSDSIM INFO]Disksim name:%s (%d)\n[SSDSIM INFO]Parameter File:%s\n[SSDSIM INFO]Output File:%s\n", name, getpid(), parm_file, output_file);
+	printf("[SSDSIM INFO]Disksim name:%s (PID: %d)\n[SSDSIM INFO]Parameter File:%s\n[SSDSIM INFO]Output File:%s\n", name, getpid(), parm_file, output_file);
 
 	struct disksim_interface *disksim;
 	struct stat buf;
@@ -192,7 +192,7 @@ void exec_SSDsim(char *name, const char *parm_file, const char *output_file) {
 }
 
 void exec_HDDsim(char *name, const char *parm_file, const char *output_file) {
-	printf("[HDDSIM INFO]Disksim name:%s (%d)\n[HDDSIM INFO]Parameter File:%s\n[HDDSIM INFO]Output File:%s\n", name, getpid(), parm_file, output_file);
+	printf("[HDDSIM INFO]Disksim name:%s (PID: %d)\n[HDDSIM INFO]Parameter File:%s\n[HDDSIM INFO]Output File:%s\n", name, getpid(), parm_file, output_file);
 
 	struct disksim_interface *disksim;
 	struct stat buf;
