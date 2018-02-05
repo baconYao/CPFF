@@ -121,14 +121,14 @@ METABLOCK *add_meta_block_to_table(REQ *tmp) {
   search->prize = get_prize(search->readCnt, search->writeCnt, search->seqLen, userNum);
 
   //Insert metadata into metadata table
-  #ifdef STATIC_CACHING_SPACE
-    //Maintain the individual metadata tables
-    search->next = metaTable[userNum-1];
-    metaTable[userNum-1] = search;
-  #else
+  #ifdef COMPETITION_CACHING_SPACE
     //Maintain only one metadata table by index:0
     search->next = metaTable[0];
     metaTable[0] = search;
+  #else
+    //Maintain the individual metadata tables
+    search->next = metaTable[userNum-1];
+    metaTable[userNum-1] = search;
   #endif
 
   //Return this new metadata block
@@ -250,23 +250,36 @@ double metadata_search_by_user_with_min_prize(unsigned userno) {
 
 
 /**
- * [根據欲處理的Request，決定系統的快取機制，並決定此request是否有額外的I/O request(即system request) ]
- * @param @param {REQ} tmp [欲處理的Request]
- * @return {double} service [完成tmp的Service Time(注意!!此時間包含系統Request的Service Time)]
+ * [從host queue讀取Request，再根據欲處理的Request，決定系統的快取機制，並決定此request是否有額外的I/O request(即system request) ]
+ * @param {double} ttime [系統的time]
+ * @param {userInfo *} user [all user]
+ * @param {QUE *} hostQueue [hostQueue pointer]
  */
-double prize_caching(REQ *tmp2, double time, userInfo *user, QUE *hostQueue) {
+void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
 
   int flag = 0;           //The flag of page
 
-  // printf("Host queue's memory address: %p\n", &hostQueue);
-  // printf("user num: %u\n", hostQueue->head->r.userno);
-  // printf("user num: %u\n", hostQueue->head->back_req->back_req->r.userno);
-  // printf("Que size %d\n", hostQueue->size);
-  
 
-  REQ *tmp;
-  while((tmp = remove_req_from_queue_head(hostQueue)) != NULL) {
+  while(1) {
+    /*host queue內沒有request*/
+    if(hostQueue->size == 0) {
+      break;
+    }
+
+    /*若request的arrival time > cpffSystemTime，代表此request還沒有資格進入user queue*/
+    if(hostQueue->head->r.arrivalTime > cpffSystemTime) {
+      break;
+    }
+    // printf("REQ arrival time %f\n\n", hostQueue->head->r.arrivalTime);
+
+    /*從host queue head讀取欲處理的request*/ 
+    REQ *tmp;
+    tmp = calloc(1, sizeof(REQ));
+    copy_req(&(hostQueue->head->r), tmp);
     
+    /*移除host queue的head指向的request*/
+    remove_req_from_queue_head(hostQueue);
+
     //Check the type of request
     if (tmp->reqFlag == DISKSIM_READ) {
       flag = PAGE_FLAG_CLEAN;
@@ -279,19 +292,50 @@ double prize_caching(REQ *tmp2, double time, userInfo *user, QUE *hostQueue) {
       flag = PAGE_FLAG_DIRTY;
       user[tmp->userno-1].UserWReq++;      
     }
-
+  
     /*搜尋是否有被cache*/
     SSD_CACHE *cache;
     cache = search_cache_by_user(tmp->diskBlkno, tmp->userno);
-
-    /*cache hit*/
+  
+    /*cache Hit: Page found in cache*/
     if(cache != NULL) {
       pcst.hitCount++;
       user[tmp->userno-1].hitCount++;
+  
+      /*New or update metadata(prize)*/ 
+      METABLOCK *meta;
+      meta = meta_block_search_by_user(tmp->diskBlkno, tmp->userno);
+      if(meta == NULL) {
+        meta = add_meta_block_to_table(tmp);
+      } else {
+        meta_block_update(meta, tmp);
+      }
+      printf("Meta block prize: %f\n", meta->prize);
+      //Caching
+      if(insert_cache_by_user(tmp->diskBlkno, flag, tmp->userno, cpffSystemTime, meta, user) == NULL) {
+        print_error(-1, "[PRIZE]insert_cache_by_user() error(cache hit but return full)");
+      }
+  
+      pcst.totalUserReq++;
+      user[tmp->userno-1].totalUserReq++;
+      user[tmp->userno-1].UserReqInPeriod++;
+
+      /*將request 送至 user ssd queue*/ 
+      if(!insert_req_to_user_que_tail(user, "SSD", tmp)) {
+        print_error(-1, "[cpff_prize_caching.c] Can't move request to user SSD queue");
+      }
+
+    } else {   /*cache Miss: Page not found in cache*/  
+      //Statistics
+      pcst.missCount++;
+      user[tmp->userno-1].missCount++;
     }
+
+    free(tmp);
+    
   }
 
-  return 0.0;
+  
 
 }
 

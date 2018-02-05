@@ -9,6 +9,7 @@ pid_t SSDsimProc, HDDsimProc;     //Sub-process id: SSD and HDD simulator
 FILE *trace;          //讀取的trace
 char *par[6];         //CPFF system arguments
 int totalWeight = 0;
+double cpffSystemTime = 0.0;
 
 /**
  * [Disksim的初始化，利用兩個Process各自執行Disksim，作為SSDsim和HDDsim，
@@ -207,9 +208,18 @@ int main(int argc, char *argv[]) {
   /*初始化*/ 
   initialize(&par[0]);
 
-
-  double k = prize_caching(NULL, 0, user, hostQueue);
-  
+  print_queue_content(hostQueue);
+  prize_caching(5.0, user, hostQueue);
+  // prize_caching(33.0, user, hostQueue);
+  // prize_caching(33.0, user, hostQueue);
+  // prize_caching(33.0, user, hostQueue);
+  // prize_caching(33.0, user, hostQueue);
+  // prize_caching(33.0, user, hostQueue);
+  // prize_caching(33.0, user, hostQueue);
+  // prize_caching(33.0, user, hostQueue);
+  // prize_caching(33.0, user, hostQueue);
+  // prize_caching(33.0, user, hostQueue);
+    
   printf("total req: %lu\n", get_total_reqs());
   int i = 0;
   for(i = 0; i < NUM_OF_USER; i++){
@@ -217,6 +227,26 @@ int main(int argc, char *argv[]) {
     printf("User %d Write req: %lu\n", i+1, user[i].UserWReq);
   }
 
+  // while(1) {
+  //   REQ *r = remove_req_from_queue_head(hostQueue);
+  //   if(r == NULL) {
+  //     break;
+  //   }
+
+  //   REQ *tmp, *tmp1;
+  //   tmp = calloc(1, sizeof(REQ));
+  //   tmp1 = calloc(1, sizeof(REQ));
+  //   copy_req(r, tmp);
+  //   copy_req(r, tmp1);
+  //   printf("HDD Service Time: %f\n", get_service_time(KEY_MSQ_DISKSIM_2, MSG_TYPE_DISKSIM_2, tmp1));
+  //   char c = getchar();
+  //   printf("SSD Service Time: %f\n", get_service_time(KEY_MSQ_DISKSIM_1, MSG_TYPE_DISKSIM_1, tmp));
+  //   free(tmp);
+  //   free(tmp1);
+  //   c = getchar();
+  // }
+  
+  
 
   // Waiting for SSDsim and HDDsim process
   wait(NULL);

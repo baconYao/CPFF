@@ -28,7 +28,6 @@
   * value = 1: Read Cache Miss，會產生一個SSD Write 的System request
   * value = 2: Read Cache Miss，且SSD Cache Space不夠(SSD is full)，會產生多個System requests，先SSD Read(sys)，再HDD Write(sys)，再SSD Write(user)
   * value = 3: Write Cache Miss，且SSD Cache Space不夠(SSD is full)，產生多個System Requests，先SSD Read(sys)，再HDD Write(sys)，再SSD Write(user)
-  *
   */
 
 
@@ -83,7 +82,7 @@
   bool insert_req_to_host_que_tail(QUE *hostQ, REQ *r);
 
   /*從queue的head端將request移出*/
-  REQ *remove_req_from_queue_head(QUE *Que);
+  void remove_req_from_queue_head(QUE *Que);
 
   /*將request加入到user_queue*/
   bool insert_req_to_user_que_tail(userInfo *user, char *qType, REQ *r);
@@ -92,7 +91,7 @@
   unsigned long get_total_reqs();
 
   /*將r的內容複製到copy*/ 
-  void copyReq(REQ *r, REQ *copy);
+  void copy_req(REQ *r, REQ *copy);
 
   bool is_empty_queue(QUE *Que);
 

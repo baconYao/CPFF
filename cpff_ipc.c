@@ -110,8 +110,8 @@ void test_message_queue() {
 	r = calloc(1, sizeof(REQ));
 	r->arrivalTime = 0.00;
 	r->devno = 0;
-	r->diskBlkno = 1234;
-	r->reqSize = 16;
+	r->diskBlkno = 2495568;
+	r->reqSize = 8;
 	r->reqFlag = 0;
 	r->userno = 0;
 	r->responseTime = -1;
@@ -190,3 +190,72 @@ void init_MSQ() {
     print_error(KEY_MSQ_DISKSIM_2, "Not remove message queue:(key)");
   }
 }
+
+
+/**
+ * [根據Message Queue傳送Request給SSDsim或HDDsim，等待回傳Service time]
+ * @param {key_t} key [根據SSDsim或HDDsim的Message Queue之Key值]
+ * @param {long} msgtype [指定Message Queue]
+ * @param {REQ*} r [欲處理的Request]
+ * @return {double} service [Service Time]
+ */
+double get_service_time(key_t key, long msgtype, REQ *r) {
+	//Send IO request
+	if(send_request_by_MSQ(key, r, msgtype) == -1) {
+		print_error(-1, "A request not sent to MSQ in send_request_by_MSQ() return:");
+		
+	}
+
+	//Statistics
+	// pcst.totalReq++;
+	// userst[r->userno-1].totalReq++;
+	// sysst.totalReq++;
+	// if (key == KEY_MSQ_DISKSIM_1) {
+	// 		pcst.ssdReq++;
+	// 		userst[r->userno-1].ssdReq++;
+	// 		sysst.ssdReq++;
+	// }
+
+	double service = -1;    //Record service time
+
+	//For SSDsim
+	if (key == KEY_MSQ_DISKSIM_1) {
+		REQ *rtn;
+		rtn = calloc(1, sizeof(REQ));
+
+		//Receive serviced request
+		if(recv_request_by_MSQ(key, rtn, MSG_TYPE_DISKSIM_1_SERVED) == -1)
+				print_error(-1, "[PC]A request not received from MSQ in recv_request_by_MSQ():");
+
+		//Record service time
+		service = rtn->responseTime;
+
+		//Release request variable and return service time
+		free(rtn);
+		return service;
+	}
+	else if (key == KEY_MSQ_DISKSIM_2) {//For HDDsim
+		REQ *rtn;
+		rtn = calloc(1, sizeof(REQ));
+
+		//Receive serviced request
+		if(recv_request_by_MSQ(key, rtn, MSG_TYPE_DISKSIM_2_SERVED) == -1)
+				print_error(-1, "[PC]A request not received from MSQ in recv_request_by_MSQ():");
+
+		//Record service time
+		service = rtn->responseTime;
+
+		//Release request variable and return service time
+		free(rtn);
+		return service;
+	}
+	else {
+		print_error(-1, "Send/Receive message with wrong key");
+		
+	}
+
+	//Return service time
+	return service;
+}
+
+

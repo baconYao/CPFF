@@ -46,4 +46,8 @@
 
   void rm_MSQ();
 
+	/*將I/O request送至disksim，並取得service time*/
+	double get_service_time(key_t key, long msgtype, REQ *r);
+
+
 #endif

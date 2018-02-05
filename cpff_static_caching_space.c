@@ -252,3 +252,13 @@ void cache_write_result_file(FILE **result, userInfo *user, int totalWeight) {
     fprintf(*result, "[static_caching_space.c] User%u: Weight:%u Start(Pages):%lu, Size(Pages):%lu\n", i+1, user[i].globalWeight, userCacheStart[i], userCacheSize[i]);
   }
 }
+
+
+/**
+ * [將SSD Page Number轉成Disksim Block(Sector)]
+ * @param {unsigned long} ssdPageno [SSD Page Number]
+ * @return {unsigned long} - [Block(Sector) Number for SSDsim(Disksim)]
+ */
+ unsigned long ssd_page_to_sim_sector(unsigned long ssdPageno) {
+	return ssdPageno*SSD_PAGE2SECTOR;
+}

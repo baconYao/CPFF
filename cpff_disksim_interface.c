@@ -120,8 +120,7 @@ void exec_SSDsim(char *name, const char *parm_file, const char *output_file) {
 		if(recv_request_by_MSQ(KEY_MSQ_DISKSIM_1, rp, MSG_TYPE_DISKSIM_1) == -1) {
 			print_error(-1, "[SSDSIM]A request not received from MSQ in recv_request_by_MSQ():");
 		}
-		
-		//PrintREQ(rp ,"From user to SSDsim");
+		//print_REQ(rp ,"From user to SSDsim");
 	
 		if (rp->reqFlag == MSG_REQUEST_CONTROL_FLAG_FINISH) {
 			REQ *ctrl;

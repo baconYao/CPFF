@@ -46,6 +46,9 @@
   //紀錄每個user的mate block數量
   static unsigned long metaCnt[NUM_OF_USER] = {0};
 
+  //紀錄每個user的min prize value
+  static double minPrize[NUM_OF_USER] = {0};
+  
   /*STRUCTURE DRFINITION: PC STATISTICS*/
   /**[Record prize caching statistics]
     * 此紀錄係針對整體系統，無視User個別的紀錄
@@ -90,6 +93,7 @@
   /*SEARCH METADATA BLOCK TABLE FOR USER WITH MINIMAL PRIZE*/
   double meta_block_search_by_user_with_min_prize(unsigned userno);
 
-  double prize_caching(REQ *tmp, double time, userInfo *user, QUE *hostQueue);
+  /*PC algorithm*/ 
+  void prize_caching(double time, userInfo *user, QUE *hostQueue);
 
 #endif
