@@ -171,23 +171,25 @@ void remove_req_from_queue_head(QUE *Que) {
 	copy->userno = r->userno;
   copy->responseTime = r->responseTime;
   copy->hasSystemRequest = r->hasSystemRequest;
+  copy->ssdPageNumber = r->ssdPageNumber;
 }
 
 /**
  * [印出queue的內容]
  */
- void print_queue_content(QUE *Que) {
+ void print_queue_content(QUE *Que, char *queueName) {
 	int i;
 	unsigned count;
 	QUE_ITEM *tmp;
   count = 0;
   tmp = Que->head;
+  printf(COLOR_YB"%s:\n", queueName);
   while (tmp != NULL) {
     count++;
     printf("%6lu <-> ", tmp->r.diskBlkno);
     tmp = tmp->back_req;
   }
-  printf("NULL (%u)\n", count);
+  printf("NULL (%u)\n"COLOR_RESET, count);
 }
 
 

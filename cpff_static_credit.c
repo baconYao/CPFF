@@ -53,3 +53,4 @@
       printf(COLOR_GB" [CREDIT]USER %u HDD CREDIT: %lf\n"COLOR_RESET, i+1, userHDDCredit[i]);
   }
 }
+

@@ -25,4 +25,5 @@
 	/*印出所有user的credit*/
 	void print_credit();
 
+
 #endif

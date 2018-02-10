@@ -201,7 +201,7 @@ METABLOCK *meta_block_search_by_user(unsigned long diskBlk, unsigned userno) {
 * @param {unsigned} userno [User number(1-n)]
 * @return {double} min->prize [回傳min prize, error:-1]
 */
-double metadata_search_by_user_with_min_prize(unsigned userno) {
+double meta_block_search_by_user_with_min_prize(unsigned userno) {
   //Determine which metadata table used in this function
   //Hint: unum is a substitute for different modes
   #ifdef COMPETITION_CACHING_SPACE
@@ -310,12 +310,18 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
       } else {
         meta_block_update(meta, tmp);
       }
-      printf("Meta block prize: %f\n", meta->prize);
-      //Caching
+      // printf("Meta block prize: %f\n", meta->prize);
+      
+      /*Caching*/
+      /*因為是Cache hit，所以會update cache table資訊*/
       if(insert_cache_by_user(tmp->diskBlkno, flag, tmp->userno, cpffSystemTime, meta, user) == NULL) {
-        print_error(-1, "[PRIZE]insert_cache_by_user() error(cache hit but return full)");
+        print_error(-1, "[cpff_prize_caching.c]insert_cache_by_user() error(cache hit but return full)");
       }
   
+      /*紀錄此request對應的page number，當request從SSD device queue被送到SSDsim時，需要參考此資訊來知道此request要對哪個diskBlkno做IO*/
+      tmp->ssdPageNumber = cache->pageno;
+
+      //statistic
       pcst.totalUserReq++;
       user[tmp->userno-1].totalUserReq++;
       user[tmp->userno-1].UserReqInPeriod++;
@@ -329,6 +335,47 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
       //Statistics
       pcst.missCount++;
       user[tmp->userno-1].missCount++;
+
+      /*將request 送至 user hdd queue*/ 
+      if(!insert_req_to_user_que_tail(user, "HDD", tmp)) {
+        print_error(-1, "[cpff_prize_caching.c] Can't move request to user HDD queue");
+      }
+
+      // /*New or update metadata(prize)*/ 
+      // METABLOCK *meta;
+      // meta = meta_block_search_by_user(tmp->diskBlkno, tmp->userno);
+      // if(meta == NULL) {
+      //   meta = add_meta_block_to_table(tmp);
+      // } else {
+      //   meta_block_update(meta, tmp);
+      // }
+
+      // //Compare MIN_PRIZE and cache or not, MIN_PRIZE是系統定義的最小prize值
+      // if(meta->prize >= MIN_PRIZE) {
+      //   // Try to insert cache 
+      //   cache = insert_cache_by_user(tmp->diskBlkno, flag, tmp->userno, cpffSystemTime, meta, user);
+        
+      //   //Cache not full(no eviction)
+      //   if (cache != NULL) {
+      //     //Record seqLen in metadata table
+      //     meta->seqLen++;
+
+      //     //Read Cache Miss: 但cache is not full，所以會產生SSD Write system request
+      //     if(tmp->reqFlag == DISKSIM_READ) {
+            
+      //       //此request將會產生System Request，當此request從HDD device queue送到HDDsim時，會產生SSD write system request
+      //       tmp->hasSystemRequest = 1;
+
+      //       //Statistics
+      //       pcst.totalUserReq++;
+      //       pcst.totalSysReq++;
+      //       user[tmp->userno-1].totalUserReq++;
+      //       user[tmp->userno-1].UserReqInPeriod++;
+
+      //     }
+      //   }
+      // }
+
     }
 
     free(tmp);

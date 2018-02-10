@@ -33,14 +33,16 @@ void print_debug(int rc, char* str) {
  * @param {char*} str [顯示字串]
  */
 void print_REQ(REQ *r, char* str) {
+	printf("-----------------------------------\n");
 	printf("[DEBUG][%s]:arrivalTime=%lf\n", str, r->arrivalTime);
 	printf("[DEBUG][%s]:devno=%u\n", str, r->devno);
 	printf("[DEBUG][%s]:diskBlkno=%8lu\n", str, r->diskBlkno);
-	printf("[DEBUG][%s]:reqSize=%u\n", str, r->reqSize);
+	printf("[DEBUG][%s]:reqSize=%u sectors\n", str, r->reqSize);
 	printf("[DEBUG][%s]:reqFlag=%u\n", str, r->reqFlag);
 	printf("[DEBUG][%s]:userno=%u\n", str, r->userno);
 	printf("[DEBUG][%s]:responseTime=%lf\n", str, r->responseTime);
 	printf("[DEBUG][%s]:hasSystemRequest=%d\n", str, r->hasSystemRequest);
+	printf("[DEBUG][%s]:ssdPageNumber=%ld\n", str, r->ssdPageNumber);
 }
 
 /**

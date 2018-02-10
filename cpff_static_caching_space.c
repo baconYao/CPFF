@@ -71,7 +71,7 @@ SSD_CACHE *insert_cache_by_user(unsigned long diskBlk, int reqFlag, unsigned use
       freePage = get_free_cache_by_user(unum);
     }
 
-    //ssdCache[freePage].pageno = freePage;
+    ssdCache[freePage].pageno = freePage;
     ssdCache[freePage].diskBlkno = diskBlk;
     ssdCache[freePage].dirtyFlag = reqFlag;
     ssdCache[freePage].freeFlag = PAGE_FLAG_NOT_FREE;

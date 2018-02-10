@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <sys/types.h>
 #include <unistd.h>   //for fork()
+#include <pthread.h>
 
 
 #include "cpff_structure.h"
@@ -26,3 +27,4 @@
 
 #include "cpff_ipc.h"
 #include "cpff_debug.h"
+
