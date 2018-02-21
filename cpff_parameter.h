@@ -24,7 +24,7 @@
   //#define SSD_BLOCK2SECTOR (SSD_BLOCK_SIZE/DISKSIM_SECTOR)
 
 
-  #define SSD_CACHING_SPACE_BY_PAGES 32768 	// total pages number
+  #define SSD_CACHING_SPACE_BY_PAGES 6 	// total pages number
 	//MAX:(8*8*2048*64*8(channels) = 67108864 sectors)(67108864/PAGE2SECTOR = 8388608 pages)
   //Hint: < 6291456 page valid!
   /*

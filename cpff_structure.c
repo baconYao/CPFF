@@ -170,8 +170,8 @@ void remove_req_from_queue_head(QUE *Que) {
 	copy->reqFlag = r->reqFlag;
 	copy->userno = r->userno;
   copy->responseTime = r->responseTime;
-  copy->hasSystemRequest = r->hasSystemRequest;
-  copy->ssdPageNumber = r->ssdPageNumber;
+  copy->isSystemRequest = r->isSystemRequest;
+  // copy->ssdPageNumber = r->ssdPageNumber;
 }
 
 /**

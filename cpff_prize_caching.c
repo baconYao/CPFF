@@ -261,6 +261,13 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
 
 
   while(1) {
+    print_queue_content(user[0].ssdQueue, "U1 SSD Q");
+    print_queue_content(user[0].hddQueue, "U1 HDD Q");
+    printf("\n");
+    print_queue_content(user[1].ssdQueue, "U2 SSD Q");
+    print_queue_content(user[1].hddQueue, "U2 HDD Q");
+    char c = getchar();
+
     /*host queue內沒有request*/
     if(hostQueue->size == 0) {
       break;
@@ -276,6 +283,8 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
     REQ *tmp;
     tmp = calloc(1, sizeof(REQ));
     copy_req(&(hostQueue->head->r), tmp);
+    
+    printf(COLOR_GB"tmp->diskBlkno: %u\n"COLOR_RESET, tmp->diskBlkno);
     
     /*移除host queue的head指向的request*/
     remove_req_from_queue_head(hostQueue);
@@ -302,7 +311,7 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
       pcst.hitCount++;
       user[tmp->userno-1].hitCount++;
   
-      /*New or update metadata(prize)*/ 
+      /*Add new one or update metadata(prize)*/ 
       METABLOCK *meta;
       meta = meta_block_search_by_user(tmp->diskBlkno, tmp->userno);
       if(meta == NULL) {
@@ -313,13 +322,13 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
       // printf("Meta block prize: %f\n", meta->prize);
       
       /*Caching*/
-      /*因為是Cache hit，所以會update cache table資訊*/
+      /*因為是Cache hit，所以會update cache table資訊，在此為預更新*/
       if(insert_cache_by_user(tmp->diskBlkno, flag, tmp->userno, cpffSystemTime, meta, user) == NULL) {
-        print_error(-1, "[cpff_prize_caching.c]insert_cache_by_user() error(cache hit but return full)");
+        print_error(-1, "[cpff_prize_caching.c (1)]insert_cache_by_user() error(cache hit but return full)");
       }
   
-      /*紀錄此request對應的page number，當request從SSD device queue被送到SSDsim時，需要參考此資訊來知道此request要對哪個diskBlkno做IO*/
-      tmp->ssdPageNumber = cache->pageno;
+      //轉換成SSD對應大小的diskBlkno
+      tmp->diskBlkno = ssd_page_to_sim_sector(cache->pageno);
 
       //statistic
       pcst.totalUserReq++;
@@ -328,57 +337,276 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
 
       /*將request 送至 user ssd queue*/ 
       if(!insert_req_to_user_que_tail(user, "SSD", tmp)) {
-        print_error(-1, "[cpff_prize_caching.c] Can't move request to user SSD queue");
+        print_error(-1, "[cpff_prize_caching.c (2)] Can't move request to user SSD queue");
       }
+
+      printf("\n$$$$$$$$$$$$$$$$$$$$ Cache hit");
+      print_REQ(tmp);
 
     } else {   /*cache Miss: Page not found in cache*/  
       //Statistics
       pcst.missCount++;
       user[tmp->userno-1].missCount++;
 
-      /*將request 送至 user hdd queue*/ 
-      if(!insert_req_to_user_que_tail(user, "HDD", tmp)) {
-        print_error(-1, "[cpff_prize_caching.c] Can't move request to user HDD queue");
+      /*New or update metadata(prize)*/ 
+      METABLOCK *meta;
+      meta = meta_block_search_by_user(tmp->diskBlkno, tmp->userno);
+      if(meta == NULL) {
+        meta = add_meta_block_to_table(tmp);
+      } else {
+        meta_block_update(meta, tmp);
       }
 
-      // /*New or update metadata(prize)*/ 
-      // METABLOCK *meta;
-      // meta = meta_block_search_by_user(tmp->diskBlkno, tmp->userno);
-      // if(meta == NULL) {
-      //   meta = add_meta_block_to_table(tmp);
-      // } else {
-      //   meta_block_update(meta, tmp);
-      // }
-
-      // //Compare MIN_PRIZE and cache or not, MIN_PRIZE是系統定義的最小prize值
-      // if(meta->prize >= MIN_PRIZE) {
-      //   // Try to insert cache 
-      //   cache = insert_cache_by_user(tmp->diskBlkno, flag, tmp->userno, cpffSystemTime, meta, user);
+      //Compare MIN_PRIZE and cache or not, MIN_PRIZE是系統定義的最小prize值
+      if(meta->prize >= MIN_PRIZE) {
+        // 因為cache miss，所以試著將request cache在SSD
+        cache = insert_cache_by_user(tmp->diskBlkno, flag, tmp->userno, cpffSystemTime, meta, user);
         
-      //   //Cache not full(no eviction)
-      //   if (cache != NULL) {
-      //     //Record seqLen in metadata table
-      //     meta->seqLen++;
+        //Cache is not full(no eviction)
+        if (cache != NULL) {
+          //Record seqLen in metadata table
+          meta->seqLen++;
 
-      //     //Read Cache Miss: 但cache is not full，所以會產生SSD Write system request
-      //     if(tmp->reqFlag == DISKSIM_READ) {
+          //Read Cache Miss: 但cache is not full，所以會產生SSD Write system request
+          if(tmp->reqFlag == DISKSIM_READ) {
             
-      //       //此request將會產生System Request，當此request從HDD device queue送到HDDsim時，會產生SSD write system request
-      //       tmp->hasSystemRequest = 1;
+            /*將hdd read request 送至 user hdd queue*/ 
+            if(!insert_req_to_user_que_tail(user, "HDD", tmp)) {
+              print_error(-1, "[cpff_prize_caching.c (3)] Can't move request to user HDD queue");
+            }
 
-      //       //Statistics
-      //       pcst.totalUserReq++;
-      //       pcst.totalSysReq++;
-      //       user[tmp->userno-1].totalUserReq++;
-      //       user[tmp->userno-1].UserReqInPeriod++;
+            //產生SSD write system request
+            REQ *r;
+            r = calloc(1, sizeof(REQ));
+            copy_req(tmp, r);
+            r->isSystemRequest = 1;     // is system request
+            r->reqFlag = DISKSIM_WRITE;       // write request
+            //轉換成SSD對應大小的diskBlkno
+            r->diskBlkno = ssd_page_to_sim_sector(cache->pageno);
 
-      //     }
-      //   }
-      // }
+            /*將ssd write system request 送至 user ssd queue*/ 
+            if(!insert_req_to_user_que_tail(user, "SSD", r)) {
+              print_error(-1, "[cpff_prize_caching.c (4)] Can't move request to user SSD queue");
+            }
+            printf("\n$$$$$$$$$$$$$$$$$$$$ Cache Read Miss\n");
+            printf("Cache is not full\n");
+            print_REQ(tmp);
+            print_REQ(r);
+
+            free(r);
+
+            //Statistics
+            pcst.totalUserReq++;
+            pcst.totalSysReq++;
+            pcst.UserRReq++;
+            user[tmp->userno-1].totalUserReq++;
+            user[tmp->userno-1].UserRReq++;
+            user[tmp->userno-1].UserReqInPeriod++;
+            user[tmp->userno-1].SysSsdWriteReq++;
+
+          } else {//Write Cache Miss: 但cache is not full，直接將user request送到user ssd queue   
+            //轉換成SSD對應大小的diskBlkno
+            tmp->diskBlkno = ssd_page_to_sim_sector(cache->pageno);
+            /*將ssd write system request 送至 user ssd queue*/ 
+            if(!insert_req_to_user_que_tail(user, "SSD", tmp)) {
+              print_error(-1, "[cpff_prize_caching.c (5)] Can't move request to user SSD queue");
+            }
+
+            printf("\n$$$$$$$$$$$$$$$$$$$$ Cache Write Miss\n");
+            printf("Cache is not full\n");
+            print_REQ(tmp);
+
+            //Statistics
+            pcst.totalUserReq++;
+            user[tmp->userno-1].totalUserReq++;
+            user[tmp->userno-1].UserWReq++;
+            user[tmp->userno-1].UserReqInPeriod++;
+          }
+        } else { // Cache is full, 所以要比較SSD中的minimal prize value，決定是否代替(eviction)
+          printf("\n$$$$$$$$$$$$$$$$$$$$ Cache Miss\n");
+          printf("Cache is full\n");
+          
+          //Find the minimal prize of the cached page
+          double minPrize = -1;
+          minPrize = meta_block_search_by_user_with_min_prize(tmp->userno);
+          if (minPrize == -1) {
+            print_error(minPrize, "[cpff_prize_caching.c (6)]Something error:No caching space and no metadata with minPrize! ");
+          }
+
+          //The prize of new page >= the minimal prize of the cached page,所以要剔除有minimal prize value的page
+          if (meta->prize >= minPrize) {
+            printf("$$$$$$meta->prize >= minPrize\n");
+          
+            /*update Base Prize Value*/
+            #ifdef COMPETITION_CACHING_SPACE
+              basePrize = minPrize;
+            #else
+              basePrize[tmp->userno-1] = minPrize;
+            #endif
+
+            //Evict the victim page with the minimal prize
+            SSD_CACHE *evict;
+            evict = evict_cache_from_LRU_with_min_prize_by_user(minPrize, tmp->userno, user);
+            if (evict == NULL) {
+              print_error(-1, "[cpff_prize_caching.c (7)]Cache eviction error: Victim not found!:");
+            }
+            
+            //Modify metadata
+            if (evict->pcMeta == NULL) {
+              print_error(-1, "[cpff_prize_caching.c (8)]Something error: Meta. of victim not found!:");
+            }
+            evict->pcMeta->seqLen--;
+            
+            //Generate IO requests
+            //If victim page is dirty, System Read SSDsim & System Write HDDsim
+            if (evict->dirtyFlag == PAGE_FLAG_DIRTY) {
+              printf("$$$$$$$$$$$$$$$$$$$$ Evict\n");
+
+              REQ *r1, *r2;
+              r1 = calloc(1, sizeof(REQ));      //SSD read system request
+              r2 = calloc(1, sizeof(REQ));      //HDD write system request
+              copy_req(tmp, r1);
+              copy_req(tmp, r2);
+              r1->diskBlkno = ssd_page_to_sim_sector(evict->pageno);  //轉換成SSD對應大小的diskBlkno
+              r1->reqFlag = DISKSIM_READ;
+              r1->isSystemRequest = 1;
+              r2->diskBlkno = evict->diskBlkno;
+              r2->reqFlag = DISKSIM_WRITE;
+              r2->isSystemRequest = 1;
+
+              /*將ssd read system request 送至 user ssd queue*/ 
+              if(!insert_req_to_user_que_tail(user, "SSD", r1)) {
+                print_error(-1, "[cpff_prize_caching.c (9)] Can't move request to user SSD queue");
+              }
+
+              /*將hdd write system request 送至 user hdd queue*/ 
+              if(!insert_req_to_user_que_tail(user, "HDD", r2)) {
+                print_error(-1, "[cpff_prize_caching.c (10)] Can't move request to user SSD queue");
+              }
+
+              printf("$$$$$$$$$$$$$$$$$$$$ generate two sys reqs \n");
+              print_REQ(r1);
+              print_REQ(r2);
+
+
+              //Statistics
+              pcst.totalSysReq += 2;
+
+              user[tmp->userno-1].totalSysReq += 2;
+              user[tmp->userno-1].SysSsdReadReq++;
+              user[tmp->userno-1].SysHddWriteReq++;
+              user[tmp->userno-1].dirtyCount++;
+              user[tmp->userno-1].SysHddWriteReq++;
+
+
+              //Release request variable
+              free(r1);
+              free(r2);
+
+            }
+            printf(COLOR_RB"$$$$$$F evict page number: %u\n"COLOR_RESET, evict->pageno);
+            
+            //Release variable
+            // free(evict);
+
+            //Statistics
+            pcst.evictCount++;
+            user[tmp->userno-1].evictCount++;
+
+            //Caching
+            /*已剔除在SSD內最小pc value的page，接著將此筆request cache在SSD內，在此為預更新*/
+            cache = insert_cache_by_user(tmp->diskBlkno, flag, tmp->userno, cpffSystemTime, meta, user);
+        
+            if(cache != NULL) {
+              //Record seqLen in metadata table
+              meta->seqLen++;
+
+              //Generate IO requests
+              //Read Miss: Read HDDsim & System Write SSDsim
+              if (tmp->reqFlag == DISKSIM_READ) {
+                REQ *r;
+                r = calloc(1, sizeof(REQ));
+                copy_req(tmp, r);
+
+                /*將hdd read request 送至 user hdd queue*/ 
+                if(!insert_req_to_user_que_tail(user, "HDD", tmp)) {
+                  print_error(-1, "[cpff_prize_caching.c (11)] Can't move request to user SSD queue");
+                }
+
+                //System Write SSDsim
+                r->diskBlkno = ssd_page_to_sim_sector(cache->pageno);     //轉換成SSD對應大小的diskBlkno
+                r->reqFlag = DISKSIM_WRITE;
+                r->isSystemRequest = 1;
+
+                /*將ssd write system request 送至 user ssd queue*/ 
+                if(!insert_req_to_user_que_tail(user, "SSD", r)) {
+                  print_error(-1, "[cpff_prize_caching.c (12)] Can't move request to user SSD queue");
+                }
+
+                printf("\n$$$$$$$$$$$$$$$$$$$$ then cache! Hdd read & system ssd write \n");
+                print_REQ(tmp);
+                print_REQ(r);
+
+                //Statistics
+                pcst.totalReq++;
+                pcst.totalSysReq++;
+              
+                user[tmp->userno-1].totalUserReq++;
+                user[tmp->userno-1].totalSysReq++;
+                user[tmp->userno-1].SysSsdWriteReq++;
+
+                //Release request variable
+                free(r);
+              } else {      //Write Miss: Write SSDsim
+                tmp->diskBlkno = ssd_page_to_sim_sector(cache->pageno);   //轉換成SSD對應大小的diskBlkno
+
+                /*將ssd write request 送至 user ssd queue*/ 
+                if(!insert_req_to_user_que_tail(user, "SSD", tmp)) {
+                  print_error(-1, "[cpff_prize_caching.c (13)] Can't move request to user SSD queue");
+                }
+
+                printf("\n$$$$$$$$$$$$$$$$$$$$ then cache! SSD write \n");
+                print_REQ(tmp);
+
+                //Statistics
+                user[tmp->userno-1].totalUserReq++;
+              }
+
+            } else {
+              print_error(-1, "[cpff_prize_caching.c (14)]After eviction, caching error! ");
+            }
+
+          } else {      //pc value < minPrize, 所以不cache
+            if (tmp->reqFlag == DISKSIM_READ) {
+              /*將hdd read request 送至 user ssd queue*/ 
+              if(!insert_req_to_user_que_tail(user, "HDD", tmp)) {
+                print_error(-1, "[cpff_prize_caching.c (13)] Can't move request to user SSD queue");
+              }
+            } else {
+              /*將hdd write request 送至 user ssd queue*/ 
+              if(!insert_req_to_user_que_tail(user, "HDD", tmp)) {
+                print_error(-1, "[cpff_prize_caching.c (13)] Can't move request to user SSD queue");
+              }
+            }
+
+            printf("\n$$$$$$$$$$$$$$$$$$$$ <minPrize! Don't cache \n");
+            print_REQ(tmp);
+
+            //Statistics
+            pcst.totalReq++;
+          
+            user[tmp->userno-1].totalUserReq++;
+            user[tmp->userno-1].UserRReq++;
+            user[tmp->userno-1].UserWReq++;
+          }
+        }
+      }
 
     }
 
+    //Release request variable
     free(tmp);
+    print_cache_by_LRU_and_users();
     
   }
 

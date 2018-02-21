@@ -41,8 +41,7 @@ void print_REQ(REQ *r, char* str) {
 	printf("[DEBUG][%s]:reqFlag=%u\n", str, r->reqFlag);
 	printf("[DEBUG][%s]:userno=%u\n", str, r->userno);
 	printf("[DEBUG][%s]:responseTime=%lf\n", str, r->responseTime);
-	printf("[DEBUG][%s]:hasSystemRequest=%d\n", str, r->hasSystemRequest);
-	printf("[DEBUG][%s]:ssdPageNumber=%ld\n", str, r->ssdPageNumber);
+	printf("[DEBUG][%s]:isSystemRequest=%d\n", str, r->isSystemRequest);
 }
 
 /**

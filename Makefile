@@ -78,7 +78,7 @@ distclean: realclean
 	$(MAKE) -C modules distclean
 
 cpffclean:
-	rm -f cpff_*.o
+	rm -f cpff_*.o cpff_*.d cpff
 
 .PHONY: modules
 
@@ -104,6 +104,10 @@ CPFF_CS = cpff_static_caching_space.c
 # CPFF_CS = cpff_dynamic_caching_space.c
 # CPFF_CS = cpff_competition_caching_space.c
 
+#the path of credit policy, choose only one#
+CPFF_CD = cpff_static_credit.c
+# CPFF_CD = cpff_dynamic_credit.c
+
 CPFF_BUG = cpff_debug.c
 CPFF_IPC = cpff_ipc.c
 CPFF_STR = cpff_structure.c
@@ -123,7 +127,7 @@ DISKSIM_SRC = disksim.c disksim_intr.c disksim_pfsim.c \
 	disksim_simpledisk.c disksim_device.c \
 	disksim_loadparams.c \
 	raw_layout.c \
-	$(CPFF_PC) $(CPFF_CS) $(CPFF_BUG) $(CPFF_IPC) $(CPFF_STR) $(CPFF_DIS_INT)
+	$(CPFF_PC) $(CPFF_CS) $(CPFF_CD) $(CPFF_BUG) $(CPFF_IPC) $(CPFF_STR) $(CPFF_DIS_INT) 
 
 DISKSIM_OBJ = $(DISKSIM_SRC:.c=.o) 
 

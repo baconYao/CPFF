@@ -6,14 +6,6 @@ QUE *hddDeviceQueue;              //claim HDD device queue
 userInfo user[NUM_OF_USER];       //建立user
 pid_t SSDsimProc, HDDsimProc;     //Sub-process id: SSD and HDD simulator
 
-/*
- * ssdSchedulerThread: 負責SSD scheduler
- * hddSchedulerThread: 負責HDD scheduler
- * ssdDispatcher: 負責將SSD device queue內的request送到SSDsim
- * hddDispatcher: 負責將HDD device queue內的request送到HDDsim
- */
-pthread_t ssdSchedulerThread, hddSchedulerThread, ssdDispatcher, hddDispatcher;
-
 FILE *trace;          //讀取的trace
 char *par[6];         //CPFF system arguments
 int totalWeight = 0;
@@ -86,22 +78,6 @@ void rm_disksim() {
 
   //After that, remove message queues
   rm_MSQ();
-}
-
-/**
- * [將request送到device queue,此函式會交由兩個thread來負責(SSD & HDD thread)]
- * @param {char *} qType [表示此shceduler負責SSD或HDD request]
- */
-void *scheduler(void *qType) {
-  char *type = (char *)qType;
-  printf("[%s Scheduler]---> Thread Id: %lu\n", type, pthread_self());
-  printf("cpffSystemTime: %f\n", cpffSystemTime);
-  while(1) {
-    if() {
-      
-    }
-  }
-  pthread_exit(NULL);
 }
 
 
@@ -189,19 +165,6 @@ void initialize(char *par[]) {
     print_error(-1, "Can't initialize user credit!");
   }
 
-  /*初始化 SSD & HDD scheduler (thread)*/ 
-  int rc;
-  rc = pthread_create(&ssdSchedulerThread, NULL, scheduler, (void *)"SSD");
-  if(rc) {
-    print_error(-1, "[Error]SSD scheduler can't build! ");
-  }
-  rc = pthread_create(&hddSchedulerThread, NULL, scheduler, (void *)"HDD");
-  if(rc) {
-    print_error(-1, "[Error]HDD scheduler can't build! ");
-  }
-
-
-  sleep(3);
   
   /*讀取trace file requests*/ 
   REQ *tmp;
@@ -210,8 +173,7 @@ void initialize(char *par[]) {
   i = 0;
   while(!feof(trace)) {
     fscanf(trace, "%lf%u%lu%u%u%u", &tmp->arrivalTime, &tmp->devno, &tmp->diskBlkno, &tmp->reqSize, &tmp->reqFlag, &tmp->userno);
-    tmp->hasSystemRequest = 0;    //default value: 0
-    tmp->ssdPageNumber = -1;    //default value: -1
+    tmp->isSystemRequest = 0;    //default value: 0
 
     /*將request放進host queue*/ 
     if(!insert_req_to_host_que_tail(hostQueue, tmp)) {
@@ -247,8 +209,8 @@ int main(int argc, char *argv[]) {
   /*初始化*/ 
   initialize(&par[0]);
 
-  // print_queue_content(hostQueue, "Host Queue");
-  // prize_caching(5.0, user, hostQueue);
+  print_queue_content(hostQueue, "Host Queue");
+  prize_caching(5.0, user, hostQueue);
   // print_queue_content(user[0].ssdQueue, "User 1 SSD Queue");
   
   // printf("total req: %lu\n", get_total_reqs());
@@ -283,7 +245,6 @@ int main(int argc, char *argv[]) {
   // }
   
   
-  pthread_join(ssdSchedulerThread, NULL);
   // Waiting for SSDsim and HDDsim process
   wait(NULL);
   wait(NULL);

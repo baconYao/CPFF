@@ -20,16 +20,9 @@
     unsigned reqFlag;		//讀:1;寫:0
     unsigned userno;		//使用者編號(1~n)
     double responseTime;	//反應時間(初始為0)
-    int hasSystemRequest;   // 表示此I/O request是否會產生額外的system request(經由Prize Caching algorithm判定)，之後I/O request從device queue送出到disksim時，才會根據狀態產生System request
-    long ssdPageNumber;   // 用來表示此request要存取的SSD page number, default -1 (沒有存取page number)
+    int isSystemRequest;   // 判斷此request是user request (1) 或system request (0), default: 0
+    // long ssdPageNumber;   // 用來表示此request要存取的SSD page number, default -1 (沒有存page number)
   } REQ;
-
-  /* [hasSystemRequest狀態表]
-  * value = 0: 預設值，沒有System request
-  * value = 1: Read Cache Miss，且SSD Cache Space夠(SSD is not full),會產生一個SSD Write 的System request，流程:(Hr -> Sw)
-  * value = 2: Read Cache Miss，且SSD Cache Space不夠(SSD is full)，會產生多個System requests，先SSD Read(sys)，再HDD Write(sys)，再SSD Write(user)，流程:(Sr -> Hw -> Hr -> Sw)
-  * value = 3: Write Cache Miss，且SSD Cache Space不夠(SSD is full)，產生多個System Requests，先SSD Read(sys)，再HDD Write(sys)，再SSD Write(user)，流程:(Sr -> Hw -> Sw)
-  */
 
 
   /*STRUCTURE DEFINITION:USER QUEUE*/
@@ -59,7 +52,7 @@
     unsigned long UserWReq;				//User Write Request數量
     unsigned long totalSysReq;			//System Request數量
     unsigned long SysSsdReadReq;			//System SSD Read Request數量
-    unsigned long SysSsdWriteReq;			//System HDD Read Request數量
+    unsigned long SysSsdWriteReq;			//System SSD Write Request數量
     unsigned long SysHddWriteReq;			//System HDD Write Request數量
     unsigned long evictCount;			//Eviction次數
     unsigned long dirtyCount;			//Dirty Page Eviction次數
