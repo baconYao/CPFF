@@ -7,7 +7,8 @@
   #include <stdbool.h>
 
   #include "cpff_parameter.h"
-
+  #include "disksim_interface.h" //for flag(DISKSIM_READ) used
+  
   /*計算進入User queue的request數量，取得Request總數(應同於Trace筆數)*/
   static unsigned long totalRequests = 0;
 
@@ -21,7 +22,7 @@
     unsigned userno;		//使用者編號(1~n)
     double responseTime;	//反應時間(初始為0)
     int isSystemRequest;   // 判斷此request是user request (1) 或system request (0), default: 0
-    // long ssdPageNumber;   // 用來表示此request要存取的SSD page number, default -1 (沒有存page number)
+    double preChargeValue;   // 此request的pre charge value(初始為0.0)
   } REQ;
 
 

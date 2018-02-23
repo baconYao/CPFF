@@ -19,9 +19,6 @@
   #endif
 
 
-  #define DISKSIM_READ 1
-  #define DISKSIM_WRITE 0
-
   /*系統定義Base Prize*/
   #ifdef COMPETITION_CACHING_SPACE
     static int basePrize;

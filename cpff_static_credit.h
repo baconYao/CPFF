@@ -20,8 +20,11 @@
 
 	/*CREDIT INITIALIZATION*/
 	int init_credit(userInfo *user, int totalWeight);
-	/*CREDIT CHARGING*/
-	double credit_charge(unsigned userno, double value, char *creditType);
+	/*CREDIT PRE CHARGING*/
+	void credit_pre_charge(unsigned userno, REQ *r, char *creditType);
+	/*Credit 補償*/ 
+	void credit_compensate(unsigned userno, double serviceTime, REQ *r, char *creditType);
+
 	/*印出所有user的credit*/
 	void print_credit();
 

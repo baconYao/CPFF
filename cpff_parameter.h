@@ -21,10 +21,14 @@
   #define SSD_PAGE2SECTOR (SSD_PAGE_SIZE/DISKSIM_SECTOR)
   #define SSD_PAGES_PER_BLOCK 64
   #define SSD_BLOCK_SIZE   (SSD_PAGE_SIZE*SSD_PAGES_PER_BLOCK) //(bytes)
+  #define SSD_PAGE_READ_TIME 0.025              // unit: ms
+  #define SSD_PAGE_WRITE_TIME 0.2               // unit: ms
+  #define SSD_BLOCK_ERASE_TIME 1.5              // unit: ms
+  #define SSD_CHIP_XFER_LATENCY 0.000025      // unit: ms
   //#define SSD_BLOCK2SECTOR (SSD_BLOCK_SIZE/DISKSIM_SECTOR)
 
 
-  #define SSD_CACHING_SPACE_BY_PAGES 6 	// total pages number
+  #define SSD_CACHING_SPACE_BY_PAGES 64 	// total pages number
 	//MAX:(8*8*2048*64*8(channels) = 67108864 sectors)(67108864/PAGE2SECTOR = 8388608 pages)
   //Hint: < 6291456 page valid!
   /*
@@ -48,8 +52,17 @@
   #define TIME_PERIOD 1000 //ms  //VSSD uses 1000.0
 
   /*credit*/
-	#define INIT_CREDIT (TIME_PERIOD*SSD_N_ELEMENTS)		//The initial credit
-
+  #define INIT_CREDIT (TIME_PERIOD*SSD_N_ELEMENTS)		//The initial credit
+  /*ssd credit pre charge ref:http://cighao.com/2016/06/28/disksim-with-ssdmodel-source-analysis-022-time-calculation/*/ 
+  #define SSD_READ_PRE_CHAREG_VALUE (SSD_PAGE_READ_TIME+SSD_CHIP_XFER_LATENCY*(512+16)*SSD_PAGE2SECTOR)               //unit: ms
+  #define SSD_WRITE_PRE_CHAREG_VALUE (SSD_PAGE_WRITE_TIME+SSD_CHIP_XFER_LATENCY*(512+16)*SSD_PAGE2SECTOR+1.5/64)      //unit: ms
+  #define HDD_READ_SEEK_TIME 4.4                // unit: ms
+  #define HDD_WRITE_SEEK_TIME 4.9                // unit: ms
+  #define HDD_ROTATIONAL_LATENCY_TIME 3         // unit: ms
+  #define HDD_TRANSFER_TIME 0.054253            // unit: ms,在此計算的是transfer 一個4KB的HDD request所需的時間
+  /*ssd credit pre charge*/ 
+  #define HDD_READ_PRE_CHAREG_VALUE HDD_READ_SEEK_TIME
+  #define HDD_WRITE_PRE_CHAREG_VALUE HDD_WRITE_SEEK_TIME
 
 	/*ipc*/
 	//One message is considered as one request. The control message is a flag which used to control simulator

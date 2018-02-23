@@ -8,8 +8,12 @@ pid_t SSDsimProc, HDDsimProc;     //Sub-process id: SSD and HDD simulator
 
 FILE *trace;          //讀取的trace
 char *par[6];         //CPFF system arguments
-int totalWeight = 0;
-double cpffSystemTime = 0.0;
+int totalWeight = 0;  //所有user的global weight累加
+double cpffSystemTime = 0.0;      //cpff的系統時間
+double SsdReqCompleteTime = 0.0;      //表示被送進SSD sim 的SSD request在系統時間(cpffSystemTime)的甚麼時候做完。 (SsdReqCompleteTime = request servie time + cpffSystemTime)
+double HddReqCompleteTime = 0.0;      //表示被送進HDD sim 的HDD request在系統時間(cpffSystemTime)的甚麼時候做完。 (SsdReqCompleteTime = request servie time + cpffSystemTime)
+bool doSsdRequest = false;      //表示是否可將SSD device queue的request送到SSD sim執行 (預設為false)
+bool doHddRequest = false;      //表示是否可將HDD device queue的request送到HDD sim執行 (預設為false)
 
 /**
  * [Disksim的初始化，利用兩個Process各自執行Disksim，作為SSDsim和HDDsim，
@@ -174,6 +178,7 @@ void initialize(char *par[]) {
   while(!feof(trace)) {
     fscanf(trace, "%lf%u%lu%u%u%u", &tmp->arrivalTime, &tmp->devno, &tmp->diskBlkno, &tmp->reqSize, &tmp->reqFlag, &tmp->userno);
     tmp->isSystemRequest = 0;    //default value: 0
+    tmp->preChargeValue = 0.0;    //default value: 0.0
 
     /*將request放進host queue*/ 
     if(!insert_req_to_host_que_tail(hostQueue, tmp)) {
@@ -186,6 +191,51 @@ void initialize(char *par[]) {
   free(tmp);
 };
 
+
+/**
+ * [cpff主程式]
+ */
+void execute_CPFF_framework() {
+  printf("Press enter to continue program.\n");
+  char c = getchar();
+  
+  
+  while(1) {
+
+    /*執行prize caching，根據系統時間(cpffSystemTime)將host queue內的request送至對應的user queue內*/ 
+    prize_caching(cpffSystemTime, user, hostQueue);
+
+    /*檢查ssd device queue內是否有request，若沒有，則啟動ssd credit base scheduler從user ssd queue內抓取request到ssd device queue*/
+    if(is_empty_queue(ssdDeviceQueue)) {
+      //do ssd credit base scheduler
+    }
+
+    /*檢查hdd device queue內是否有request，若沒有，則啟動hdd credit base scheduler從user hdd queue內抓取request到hdd device queue*/
+    if(is_empty_queue(hddDeviceQueue)) {
+      //do hdd credit base scheduler
+    }
+    
+    // if(is_empty_queue(user[0].hddQueue)) {
+    //   break;
+    // }
+    // REQ *tmp;
+    // tmp = calloc(1, sizeof(REQ));
+    // copy_req(&(user[0].hddQueue->head->r), tmp);
+    // print_REQ(tmp, "user1 hdd");
+
+    // credit_pre_charge(0, tmp, "HDDCredit");
+    // print_credit();
+    // double serT = get_service_time(KEY_MSQ_DISKSIM_2, MSG_TYPE_DISKSIM_2, tmp);
+    // printf("HDD Service Time: %f\n", serT);
+    // print_REQ(tmp, "BBB");
+    // credit_compensate(0, serT, tmp, "HDDCredit");
+    // print_credit();
+    // free(tmp);
+    // remove_req_from_queue_head(user[0].hddQueue);
+    c = getchar();
+    
+  }
+}
 
 int main(int argc, char *argv[]) {
 
@@ -209,10 +259,15 @@ int main(int argc, char *argv[]) {
   /*初始化*/ 
   initialize(&par[0]);
 
-  print_queue_content(hostQueue, "Host Queue");
-  prize_caching(5.0, user, hostQueue);
-  // print_queue_content(user[0].ssdQueue, "User 1 SSD Queue");
-  
+  execute_CPFF_framework();
+
+  // print_queue_content(hostQueue, "Host Queue");
+  // prize_caching(5.0, user, hostQueue);
+  // print_queue_content(user[0].hddQueue, "User 1 HDD Queue");
+  // prize_caching(10.0, user, hostQueue);
+  // print_queue_content(user[0].hddQueue, "User 1 HDD Queue");
+  // prize_caching(15.5, user, hostQueue);
+  // print_queue_content(user[0].hddQueue, "User 1 HDD Queue");
   // printf("total req: %lu\n", get_total_reqs());
   // int i = 0;
   // for(i = 0; i < NUM_OF_USER; i++){
@@ -222,6 +277,30 @@ int main(int argc, char *argv[]) {
   //   print_queue_content(user[i].hddQueue, "HDD Queue");
   //   printf("Read req: %lu\n", i+1, user[i].UserRReq);
   //   printf("Write req: %lu\n", i+1, user[i].UserWReq);
+  // }
+
+  // char c = getchar();
+
+  // while(1) {
+  //   if(is_empty_queue(user[0].hddQueue)) {
+  //     break;
+  //   }
+  //   REQ *tmp;
+  //   tmp = calloc(1, sizeof(REQ));
+  //   copy_req(&(user[0].hddQueue->head->r), tmp);
+  //   print_REQ(tmp, "user1 hdd");
+
+  //   credit_pre_charge(0, tmp, "HDDCredit");
+  //   print_credit();
+  //   double serT = get_service_time(KEY_MSQ_DISKSIM_2, MSG_TYPE_DISKSIM_2, tmp);
+  //   printf("HDD Service Time: %f\n", serT);
+  //   print_REQ(tmp, "BBB");
+  //   credit_compensate(0, serT, tmp, "HDDCredit");
+  //   print_credit();
+  //   free(tmp);
+  //   remove_req_from_queue_head(user[0].hddQueue);
+  //   c = getchar();
+    
   // }
 
 

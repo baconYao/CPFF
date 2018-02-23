@@ -42,6 +42,7 @@ void print_REQ(REQ *r, char* str) {
 	printf("[DEBUG][%s]:userno=%u\n", str, r->userno);
 	printf("[DEBUG][%s]:responseTime=%lf\n", str, r->responseTime);
 	printf("[DEBUG][%s]:isSystemRequest=%d\n", str, r->isSystemRequest);
+	printf("[DEBUG][%s]:preChargeValue=%f\n", str, r->preChargeValue);
 }
 
 /**

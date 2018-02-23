@@ -33,6 +33,7 @@ echo ""
 
 # Make cpff file
 echo "Make cpff file......."
+make
 make cpff
 echo ""
 echo ""

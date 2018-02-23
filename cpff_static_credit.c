@@ -4,7 +4,7 @@
  * @param {userInfo *} user [users' information]
  * @return {int} 0/-1 [success/fail]
  */
- int init_credit(userInfo *user, int totalWeight) {
+int init_credit(userInfo *user, int totalWeight) {
   //Check the sum of user weights 
   if (totalWeight == 0) {
       print_error(totalWeight, "[static_credit.c]Total User Weight = ");
@@ -25,23 +25,84 @@
 
 
 /**
- * [消耗Credit，根據User number]
+ * [預先扣除credit]
  * @param {unsigned} userno [User number(0-n)]
- * @param {double} value [消耗量]
- * @param {char *} creditType [判斷是哪種type的credit]
+ * @param {REQ *} r [the reuqest in the user queue]
+ * @param {char *} creditType [判斷是哪種type的credit (SSDCredit or HDDCredit)]
  * @return {double} userCredit [Modified user credit]
  */
- double credit_charge(unsigned userno, double value, char *creditType) {
-  //Charge credit
+void credit_pre_charge(unsigned userno, REQ *r, char *creditType) {
   if(!strcmp("SSDCredit", creditType)) {
-    userSSDCredit[userno] -= value;
-    return userSSDCredit[userno];
+    switch (r->reqFlag) {
+      case DISKSIM_READ:
+        r->preChargeValue = SSD_READ_PRE_CHAREG_VALUE;
+        userSSDCredit[userno] -= SSD_READ_PRE_CHAREG_VALUE;
+        break;
+      case DISKSIM_WRITE:
+        r->preChargeValue = SSD_WRITE_PRE_CHAREG_VALUE;
+        userSSDCredit[userno] -= SSD_WRITE_PRE_CHAREG_VALUE;
+        break;
+      default:
+        break;
+    }
   } else {
-    userHDDCredit[userno] -= value;
-    return userHDDCredit[userno];
+    switch (r->reqFlag) {
+      case DISKSIM_READ:
+        r->preChargeValue = HDD_READ_PRE_CHAREG_VALUE;
+        userHDDCredit[userno] -= HDD_READ_PRE_CHAREG_VALUE;
+        break;
+      case DISKSIM_WRITE:
+        r->preChargeValue = HDD_WRITE_PRE_CHAREG_VALUE;
+        userHDDCredit[userno] -= HDD_WRITE_PRE_CHAREG_VALUE;
+        break;
+      default:
+        break;
+    }
   }
 }
 
+/**
+ * [當實際的request完成後，會和pre-charge扣的credit比較，進行補償]
+ * @param {unsigned} userno [User number(0-n)]
+ * @param {double} serviceTime [request的service time]
+ * @param {REQ *} r [the reuqest which was serviced by Simulator]
+ * @param {char *} creditType [判斷是哪種type的credit (SSDCredit or HDDCredit)]
+ * @return {double} userCredit [Modified user credit]
+ */
+void credit_compensate(unsigned userno, double serviceTime, REQ *r, char *creditType) {
+  //Charge credit
+  if(!strcmp("SSDCredit", creditType)) {
+    switch (r->reqFlag) {
+      case DISKSIM_READ:
+        userSSDCredit[userno] += SSD_READ_PRE_CHAREG_VALUE - serviceTime;
+        break;
+      case DISKSIM_WRITE:
+        userSSDCredit[userno] += SSD_WRITE_PRE_CHAREG_VALUE - serviceTime;
+        break;
+      default:
+        break;
+    }
+  } else {
+    switch (r->reqFlag) {
+      case DISKSIM_READ:
+        userHDDCredit[userno] += HDD_READ_PRE_CHAREG_VALUE - serviceTime;
+        break;
+      case DISKSIM_WRITE:
+        userHDDCredit[userno] += HDD_WRITE_PRE_CHAREG_VALUE - serviceTime;
+        break;
+      default:
+        break;
+    }
+  }
+}
+
+/**
+ * [根據Credit策略，將user ssd queue內的request送至ssd device queue內]
+ * @param {userInfo *} user [users' information]
+ */
+void ssd_credit_scheduler(userInfo *user) {
+
+}
 
 /**
  * [印出所有user的credit]

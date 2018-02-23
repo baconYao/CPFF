@@ -261,15 +261,9 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
 
 
   while(1) {
-    print_queue_content(user[0].ssdQueue, "U1 SSD Q");
-    print_queue_content(user[0].hddQueue, "U1 HDD Q");
-    printf("\n");
-    print_queue_content(user[1].ssdQueue, "U2 SSD Q");
-    print_queue_content(user[1].hddQueue, "U2 HDD Q");
-    char c = getchar();
-
+   
     /*host queue內沒有request*/
-    if(hostQueue->size == 0) {
+    if(is_empty_queue(hostQueue)) {
       break;
     }
 
@@ -284,7 +278,7 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
     tmp = calloc(1, sizeof(REQ));
     copy_req(&(hostQueue->head->r), tmp);
     
-    printf(COLOR_GB"tmp->diskBlkno: %u\n"COLOR_RESET, tmp->diskBlkno);
+    // printf(COLOR_GB"tmp->diskBlkno: %u\n"COLOR_RESET, tmp->diskBlkno);
     
     /*移除host queue的head指向的request*/
     remove_req_from_queue_head(hostQueue);
@@ -340,8 +334,8 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
         print_error(-1, "[cpff_prize_caching.c (2)] Can't move request to user SSD queue");
       }
 
-      printf("\n$$$$$$$$$$$$$$$$$$$$ Cache hit");
-      print_REQ(tmp);
+      // printf("\n$$$$$$$$$$$$$$$$$$$$ Cache hit");
+      // print_REQ(tmp);
 
     } else {   /*cache Miss: Page not found in cache*/  
       //Statistics
@@ -388,10 +382,10 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
             if(!insert_req_to_user_que_tail(user, "SSD", r)) {
               print_error(-1, "[cpff_prize_caching.c (4)] Can't move request to user SSD queue");
             }
-            printf("\n$$$$$$$$$$$$$$$$$$$$ Cache Read Miss\n");
-            printf("Cache is not full\n");
-            print_REQ(tmp);
-            print_REQ(r);
+            // printf("\n$$$$$$$$$$$$$$$$$$$$ Cache Read Miss\n");
+            // printf("Cache is not full\n");
+            // print_REQ(tmp);
+            // print_REQ(r);
 
             free(r);
 
@@ -412,9 +406,9 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
               print_error(-1, "[cpff_prize_caching.c (5)] Can't move request to user SSD queue");
             }
 
-            printf("\n$$$$$$$$$$$$$$$$$$$$ Cache Write Miss\n");
-            printf("Cache is not full\n");
-            print_REQ(tmp);
+            // printf("\n$$$$$$$$$$$$$$$$$$$$ Cache Write Miss\n");
+            // printf("Cache is not full\n");
+            // print_REQ(tmp);
 
             //Statistics
             pcst.totalUserReq++;
@@ -423,8 +417,8 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
             user[tmp->userno-1].UserReqInPeriod++;
           }
         } else { // Cache is full, 所以要比較SSD中的minimal prize value，決定是否代替(eviction)
-          printf("\n$$$$$$$$$$$$$$$$$$$$ Cache Miss\n");
-          printf("Cache is full\n");
+          // printf("\n$$$$$$$$$$$$$$$$$$$$ Cache Miss\n");
+          // printf("Cache is full\n");
           
           //Find the minimal prize of the cached page
           double minPrize = -1;
@@ -435,7 +429,7 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
 
           //The prize of new page >= the minimal prize of the cached page,所以要剔除有minimal prize value的page
           if (meta->prize >= minPrize) {
-            printf("$$$$$$meta->prize >= minPrize\n");
+            // printf("$$$$$$meta->prize >= minPrize\n");
           
             /*update Base Prize Value*/
             #ifdef COMPETITION_CACHING_SPACE
@@ -460,7 +454,7 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
             //Generate IO requests
             //If victim page is dirty, System Read SSDsim & System Write HDDsim
             if (evict->dirtyFlag == PAGE_FLAG_DIRTY) {
-              printf("$$$$$$$$$$$$$$$$$$$$ Evict\n");
+              // printf("$$$$$$$$$$$$$$$$$$$$ Evict\n");
 
               REQ *r1, *r2;
               r1 = calloc(1, sizeof(REQ));      //SSD read system request
@@ -484,9 +478,9 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
                 print_error(-1, "[cpff_prize_caching.c (10)] Can't move request to user SSD queue");
               }
 
-              printf("$$$$$$$$$$$$$$$$$$$$ generate two sys reqs \n");
-              print_REQ(r1);
-              print_REQ(r2);
+              // printf("$$$$$$$$$$$$$$$$$$$$ generate two sys reqs \n");
+              // print_REQ(r1);
+              // print_REQ(r2);
 
 
               //Statistics
@@ -504,10 +498,9 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
               free(r2);
 
             }
-            printf(COLOR_RB"$$$$$$F evict page number: %u\n"COLOR_RESET, evict->pageno);
+            // printf(COLOR_RB"$$$$$$F evict page number: %u\n"COLOR_RESET, evict->pageno);
             
-            //Release variable
-            // free(evict);
+            
 
             //Statistics
             pcst.evictCount++;
@@ -543,9 +536,9 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
                   print_error(-1, "[cpff_prize_caching.c (12)] Can't move request to user SSD queue");
                 }
 
-                printf("\n$$$$$$$$$$$$$$$$$$$$ then cache! Hdd read & system ssd write \n");
-                print_REQ(tmp);
-                print_REQ(r);
+                // printf("\n$$$$$$$$$$$$$$$$$$$$ then cache! Hdd read & system ssd write \n");
+                // print_REQ(tmp);
+                // print_REQ(r);
 
                 //Statistics
                 pcst.totalReq++;
@@ -565,8 +558,8 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
                   print_error(-1, "[cpff_prize_caching.c (13)] Can't move request to user SSD queue");
                 }
 
-                printf("\n$$$$$$$$$$$$$$$$$$$$ then cache! SSD write \n");
-                print_REQ(tmp);
+                // printf("\n$$$$$$$$$$$$$$$$$$$$ then cache! SSD write \n");
+                // print_REQ(tmp);
 
                 //Statistics
                 user[tmp->userno-1].totalUserReq++;
@@ -589,8 +582,8 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
               }
             }
 
-            printf("\n$$$$$$$$$$$$$$$$$$$$ <minPrize! Don't cache \n");
-            print_REQ(tmp);
+            // printf("\n$$$$$$$$$$$$$$$$$$$$ <minPrize! Don't cache \n");
+            // print_REQ(tmp);
 
             //Statistics
             pcst.totalReq++;
@@ -606,7 +599,8 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
 
     //Release request variable
     free(tmp);
-    print_cache_by_LRU_and_users();
+
+    // print_cache_by_LRU_and_users();
     
   }
 
