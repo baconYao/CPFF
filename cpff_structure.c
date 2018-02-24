@@ -143,7 +143,6 @@ bool insert_req_to_device_que_tail(QUE *deviceQ, REQ *r) {
     deviceQ->tail = tmp;
   }
   deviceQ->size++;
-  
   return true;
 }
 
@@ -189,7 +188,7 @@ void remove_req_from_queue_head(QUE *Que) {
 	copy->userno = r->userno;
   copy->responseTime = r->responseTime;
   copy->isSystemRequest = r->isSystemRequest;
-  // copy->ssdPageNumber = r->ssdPageNumber;
+  copy->preChargeValue = r->preChargeValue;
 }
 
 /**
@@ -228,4 +227,30 @@ bool is_empty_queue(QUE *Que) {
   }
 
   return true;         // queue is empty
+}
+
+/**
+ * [檢查所有的user ssd queue是否為空]
+ */
+bool are_all_user_ssd_queue_empty(userInfo *user) {
+  int i;
+  for(i = 0; i < NUM_OF_USER; i++) {
+    if(user[i].ssdQueue->size > 0) {
+      return false;
+    }
+  }
+  return true;         // all user ssd queue are empty
+}
+
+/**
+ * [檢查所有的user hdd queue是否為空]
+ */
+bool are_all_user_hdd_queue_empty(userInfo *user) {
+  int i;
+  for(i = 0; i < NUM_OF_USER; i++) {
+    if(user[i].hddQueue->size > 0) {
+      return false;
+    }
+  }
+  return true;         // all user hdd queue are empty
 }

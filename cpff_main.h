@@ -27,6 +27,7 @@
 #include "cpff_ipc.h"
 #include "cpff_debug.h"
 
+
 void init_disksim();
 void rm_disksim();
 void initialize(char *par[]);

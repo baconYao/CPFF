@@ -23,6 +23,27 @@ int init_credit(userInfo *user, int totalWeight) {
   return 0;
 }
 
+/**
+ * [針對所有Users補充Credit]
+ * @return {int} 0/-1 [success/fail]
+ */
+ int credit_replenish(userInfo *user, int totalWeight) {
+  //Check the sum of user weights 
+  if (totalWeight == 0) {
+    print_error(totalWeight, "[CREDIT]Error totalWeight = ");
+    return -1;
+  }
+  
+  //Replenishment policy: User credit is negative or positive
+  int i;
+  for(i = 0; i < NUM_OF_USER; i++) {
+    userSSDCredit[i] = INIT_CREDIT * ((double)user[i].globalWeight/totalWeight);
+    userHDDCredit[i] = INIT_CREDIT * ((double)user[i].globalWeight/totalWeight);
+  }
+  
+  return 0;
+}
+
 
 /**
  * [預先扣除credit]
@@ -74,10 +95,10 @@ void credit_compensate(unsigned userno, double serviceTime, REQ *r, char *credit
   if(!strcmp("SSDCredit", creditType)) {
     switch (r->reqFlag) {
       case DISKSIM_READ:
-        userSSDCredit[userno] += SSD_READ_PRE_CHAREG_VALUE - serviceTime;
+        userSSDCredit[userno] = userSSDCredit[userno] + (SSD_READ_PRE_CHAREG_VALUE - serviceTime);
         break;
       case DISKSIM_WRITE:
-        userSSDCredit[userno] += SSD_WRITE_PRE_CHAREG_VALUE - serviceTime;
+        userSSDCredit[userno] = userSSDCredit[userno] + (SSD_WRITE_PRE_CHAREG_VALUE - serviceTime);
         break;
       default:
         break;
@@ -85,10 +106,10 @@ void credit_compensate(unsigned userno, double serviceTime, REQ *r, char *credit
   } else {
     switch (r->reqFlag) {
       case DISKSIM_READ:
-        userHDDCredit[userno] += HDD_READ_PRE_CHAREG_VALUE - serviceTime;
+        userHDDCredit[userno] = userHDDCredit[userno] + (HDD_READ_PRE_CHAREG_VALUE - serviceTime);
         break;
       case DISKSIM_WRITE:
-        userHDDCredit[userno] += HDD_WRITE_PRE_CHAREG_VALUE - serviceTime;
+        userHDDCredit[userno] = userHDDCredit[userno] + (HDD_WRITE_PRE_CHAREG_VALUE - serviceTime);
         break;
       default:
         break;
@@ -112,19 +133,12 @@ void ssd_credit_scheduler(userInfo *user, QUE *ssdDeviceQueue) {
       REQ *tmp;
       tmp = calloc(1, sizeof(REQ));
       copy_req(&(user[i].ssdQueue->head->r), tmp);
-
-      /*移除user ssd queue的head指向的request*/
-      remove_req_from_queue_head(user[i].ssdQueue);
-
-      insert_req_to_device_que_tail(ssdDeviceQueue, tmp);
-
       /*pre charge ssd credit*/ 
       credit_pre_charge(i, tmp, "SSDCredit");
 
-      print_REQ(tmp, "BBB");
-      print_credit();
-      print_queue_content(ssdDeviceQueue, "SSD Device Queue");
-
+      insert_req_to_device_que_tail(ssdDeviceQueue, tmp);
+      /*移除user ssd queue的head指向的request*/
+      remove_req_from_queue_head(user[i].ssdQueue);
       /* release variable */
       free(tmp);
     }
@@ -147,19 +161,12 @@ void hdd_credit_scheduler(userInfo *user, QUE *hddDeviceQueue) {
       REQ *tmp;
       tmp = calloc(1, sizeof(REQ));
       copy_req(&(user[i].hddQueue->head->r), tmp);
-
-      /*移除user ssd queue的head指向的request*/
-      remove_req_from_queue_head(user[i].hddQueue);
-
-      insert_req_to_device_que_tail(hddDeviceQueue, tmp);
-
       /*pre charge ssd credit*/ 
       credit_pre_charge(i, tmp, "HDDCredit");
 
-      print_REQ(tmp, "AAA");
-      print_credit();
-      print_queue_content(hddDeviceQueue, "HDD Device Queue");
-
+      insert_req_to_device_que_tail(hddDeviceQueue, tmp);
+      /*移除user ssd queue的head指向的request*/
+      remove_req_from_queue_head(user[i].hddQueue);
       /* release variable */
       free(tmp);
     }

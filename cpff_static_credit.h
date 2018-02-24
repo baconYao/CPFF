@@ -10,10 +10,6 @@
   #include "cpff_structure.h"
   #include "cpff_debug.h"
 
-	/*USER WEIGHT*/
-	// unsigned userWeight[NUM_OF_USER];
-	// unsigned totalWeight;
-
 	/*USER CREDIT*/
 	static double userSSDCredit[NUM_OF_USER];
 	static double userHDDCredit[NUM_OF_USER];
@@ -24,9 +20,11 @@
 	void credit_pre_charge(unsigned userno, REQ *r, char *creditType);
 	/*Credit 補償*/ 
 	void credit_compensate(unsigned userno, double serviceTime, REQ *r, char *creditType);
-
+	/*Credit 重新補充*/ 
+	int credit_replenish(userInfo *user, int totalWeight);
+	/*ssd credit-based scheduler*/
 	void ssd_credit_scheduler(userInfo *user, QUE *ssdDeviceQueue);
-
+	/*hdd credit-based scheduler*/
 	void hdd_credit_scheduler(userInfo *user, QUE *hddDeviceQueue);
 
 	/*印出所有user的credit*/

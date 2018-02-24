@@ -12,7 +12,7 @@ int totalWeight = 0;  //所有user的global weight累加
 double cpffSystemTime = 0.0;      //cpff的系統時間
 double ssdReqCompleteTime = 0.0;      //表示被送進SSD sim 的SSD request在系統時間(cpffSystemTime)的甚麼時候做完。 (ssdReqCompleteTime = request servie time + cpffSystemTime)
 double hddReqCompleteTime = 0.0;      //表示被送進HDD sim 的HDD request在系統時間(cpffSystemTime)的甚麼時候做完。 (hddReqCompleteTime = request servie time + cpffSystemTime)
-double nextReplenishCreditTime = 1000.0;    //default 1000.0  ms = 1 second
+double nextReplenishCreditTime = 1000.0;    //credit重新補充的時間，每次加1000.0(ms)，預設為1000.0ms = 1 second
 bool doSsdRequest = false;      //表示是否可將SSD device queue的request送到SSD sim執行 (預設為false)
 bool doHddRequest = false;      //表示是否可將HDD device queue的request送到HDD sim執行 (預設為false)
 
@@ -203,9 +203,10 @@ void execute_CPFF_framework() {
   
   while(1) {
     double ssdServiceTime, hddServiceTime;
-
-    printf(COLOR_BB"CPFF System Time: %f\n"COLOR_RESET, cpffSystemTime);
-
+    
+    printf(COLOR_BB"\nCPFF System Time: %f\n"COLOR_RESET, cpffSystemTime);
+    print_credit();
+    
     /*執行prize caching，根據系統時間(cpffSystemTime)將host queue內的request送至對應的user queue內*/ 
     prize_caching(cpffSystemTime, user, hostQueue);
 
@@ -213,66 +214,100 @@ void execute_CPFF_framework() {
     if(is_empty_queue(ssdDeviceQueue)) {
       //do ssd credit base scheduler, dispatch request to ssd device queue
       ssd_credit_scheduler(user, ssdDeviceQueue);
+      // print_queue_content(ssdDeviceQueue, "ssdDeviceQueue");
     }
 
     /*檢查hdd device queue內是否有request，若沒有，則啟動hdd credit base scheduler從user hdd queue內抓取request到hdd device queue*/
     if(is_empty_queue(hddDeviceQueue)) {
       //do hdd credit base scheduler, dispatch request to hdd device queue
       hdd_credit_scheduler(user, hddDeviceQueue);
+      // print_queue_content(hddDeviceQueue, "hddDeviceQueue");
     }
     
-    printf("Press enter to continue program2.\n");
-    c = getchar();
+    printf("===============================================\n");
 
-    // we can send ssd request to SSD sim
+    /* we can send ssd request to SSD sim */
     if(cpffSystemTime == ssdReqCompleteTime) {
-      REQ *ssdTmp;
-      ssdTmp = &ssdDeviceQueue->head->r;
-      ssdServiceTime = get_service_time(KEY_MSQ_DISKSIM_1, MSG_TYPE_DISKSIM_1, ssdTmp);
-      ssdReqCompleteTime = ssdServiceTime + cpffSystemTime;
-      printf(COLOR_RB"ssdReqCompleteTime: %f\n"COLOR_RESET, ssdReqCompleteTime);
-      remove_req_from_queue_head(ssdDeviceQueue);
-      // print_queue_content(ssdDeviceQueue, "SSD Device Queue");
+      if(!is_empty_queue(ssdDeviceQueue)) {
+        // printf("Is do SSD req\n");
+        REQ *ssdTmp;  
+        ssdTmp = &(ssdDeviceQueue->head->r);    //取得SSD device queue內的head pointer指向的request
+        // print_REQ(ssdTmp, "SSD REQ");
+        ssdServiceTime = get_service_time(KEY_MSQ_DISKSIM_1, MSG_TYPE_DISKSIM_1, ssdTmp);   //送進SSD sim，獲得此request的service time
+        credit_compensate(ssdTmp->userno-1, ssdServiceTime, ssdTmp, "SSDCredit");   //進行credit的補償
+        ssdReqCompleteTime = ssdServiceTime + cpffSystemTime;   //推進下個ssd device queue 內 request可以做的時間
+        // printf(COLOR_RB"ssdReqCompleteTime: %f\n"COLOR_RESET, ssdReqCompleteTime);
+        remove_req_from_queue_head(ssdDeviceQueue);
+        // print_queue_content(ssdDeviceQueue, "SSD Device Queue");
+      }
     }
 
-    // we can send ssd request to SSD sim
+    /* we can send hdd request to HDD sim */
     if(cpffSystemTime == hddReqCompleteTime) {
-      REQ *hddTmp;
-      hddTmp = &hddDeviceQueue->head->r;
-      hddServiceTime = get_service_time(KEY_MSQ_DISKSIM_2, MSG_TYPE_DISKSIM_2, hddTmp);
-      hddReqCompleteTime = hddServiceTime + cpffSystemTime;
-      printf(COLOR_GB"hddReqCompleteTime: %f\n"COLOR_RESET, hddReqCompleteTime);
-      remove_req_from_queue_head(hddDeviceQueue);
-      // print_queue_content(hddDeviceQueue, "HDD Device Queue");
+      if(!is_empty_queue(hddDeviceQueue)) {
+        // printf("Is do HDD req\n");
+        REQ *hddTmp;
+        hddTmp = &(hddDeviceQueue->head->r);    //取得HDD device queue內的head pointer指向的request
+        // print_REQ(hddTmp, "HDD REQ");
+        hddServiceTime = get_service_time(KEY_MSQ_DISKSIM_2, MSG_TYPE_DISKSIM_2, hddTmp);   //送進HDD sim，獲得此request的service time
+        credit_compensate(hddTmp->userno-1, hddServiceTime, hddTmp, "HDDCredit");     //進行credit的補償
+        hddReqCompleteTime = hddServiceTime + cpffSystemTime;   //推進下個hdd device queue 內 request可以做的時間
+        // printf(COLOR_YB"hddReqCompleteTime: %f\n"COLOR_RESET, hddReqCompleteTime);
+        remove_req_from_queue_head(hddDeviceQueue);
+        // print_queue_content(hddDeviceQueue, "HDD Device Queue");
+      }
     }
     
-    // shiftting cpffSystemTime to the nearest time
+    // printf(COLOR_RB"ssdReqCompleteTime: %f\n"COLOR_RESET, ssdReqCompleteTime);
+    // printf(COLOR_RB"ssd device queue size: %d\n"COLOR_RESET, ssdDeviceQueue->size);
+    // printf(COLOR_YB"hddReqCompleteTime: %f\n"COLOR_RESET, hddReqCompleteTime);
+    // printf(COLOR_YB"hdd device queue size: %d\n"COLOR_RESET, hddDeviceQueue->size);
+    // if(!is_empty_queue(hostQueue)) {
+    //   printf("Next request arrival time: %f\n", hostQueue->head->r.arrivalTime);
+    // }
+    
+    /*推進系統時間*/
     cpffSystemTime = shift_cpffSystemTime(ssdReqCompleteTime, hddReqCompleteTime);
     
+    /*每1000ms，重新補充credit*/
+    if(cpffSystemTime == nextReplenishCreditTime) {
+      print_credit();
+      if(credit_replenish(user, totalWeight) != 0) {
+        print_error(-1, "Can't replenish user credit!");
+      }
+      nextReplenishCreditTime += 1000.0;
+      printf(CYAN_BOLD_ITALIC"Credit Replenish!!!!\n"COLOR_RESET);
+      print_credit();
+      c = getchar();
+    }
 
-    c = getchar();
+    // c = getchar();
     
   }
 }
 
 double shift_cpffSystemTime(double ssdReqCompleteTime, double hddReqCompleteTime) {
-  double target = ssdReqCompleteTime;
-
-  if(target > hddReqCompleteTime) {
-    target = hddReqCompleteTime;
+  double minimal = nextReplenishCreditTime;
+  /*若只要ssd device queue 或 所有user ssd queue其中一個不為空的，則ssdReqCompleteTime必須列入系統時間推進的參考。*/
+  if(!is_empty_queue(ssdDeviceQueue) || !are_all_user_ssd_queue_empty(user)) {
+    if(minimal > ssdReqCompleteTime) {
+      minimal = ssdReqCompleteTime;
+    }
   }
-
-  if(target > nextReplenishCreditTime) {
-    target = nextReplenishCreditTime;
+  /*若只要hdd device queue 或 所有user hdd queue其中一個不為空的，則hddReqCompleteTime必須列入系統時間推進的參考。*/
+  if(!is_empty_queue(hddDeviceQueue) || !are_all_user_hdd_queue_empty(user)) {
+    if(minimal > hddReqCompleteTime) {
+      minimal = hddReqCompleteTime;
+    }
   }
-
+ 
   if(!is_empty_queue(hostQueue)) {
-    if(target > hostQueue->head->r.arrivalTime) {
-      target = hostQueue->head->r.arrivalTime;
+    if(minimal > hostQueue->head->r.arrivalTime) {
+      minimal = hostQueue->head->r.arrivalTime;
     }
   }
   
-  return target;
+  return minimal;
 }
 
 int main(int argc, char *argv[]) {
@@ -299,69 +334,6 @@ int main(int argc, char *argv[]) {
 
   execute_CPFF_framework();
 
-  // print_queue_content(hostQueue, "Host Queue");
-  // prize_caching(5.0, user, hostQueue);
-  // print_queue_content(user[0].hddQueue, "User 1 HDD Queue");
-  // prize_caching(10.0, user, hostQueue);
-  // print_queue_content(user[0].hddQueue, "User 1 HDD Queue");
-  // prize_caching(15.5, user, hostQueue);
-  // print_queue_content(user[0].hddQueue, "User 1 HDD Queue");
-  // printf("total req: %lu\n", get_total_reqs());
-  // int i = 0;
-  // for(i = 0; i < NUM_OF_USER; i++){
-  //   printf("User %d:\n", i+1);
-  //   printf("User %d:\n", i+1);
-  //   print_queue_content(user[i].ssdQueue, "SSD Queue");
-  //   print_queue_content(user[i].hddQueue, "HDD Queue");
-  //   printf("Read req: %lu\n", i+1, user[i].UserRReq);
-  //   printf("Write req: %lu\n", i+1, user[i].UserWReq);
-  // }
-
-  // char c = getchar();
-
-  // while(1) {
-  //   if(is_empty_queue(user[0].hddQueue)) {
-  //     break;
-  //   }
-  //   REQ *tmp;
-  //   tmp = &user[0].hddQueue->head->r;
-  //   // tmp = calloc(1, sizeof(REQ));
-  //   // copy_req(&(user[0].hddQueue->head->r), tmp);
-  //   print_REQ(tmp, "user1 hdd");
-
-  //   credit_pre_charge(0, tmp, "HDDCredit");
-  //   print_credit();
-  //   double serT = get_service_time(KEY_MSQ_DISKSIM_2, MSG_TYPE_DISKSIM_2, tmp);
-  //   printf("HDD Service Time: %f\n", serT);
-  //   print_REQ(tmp, "BBB");
-  //   credit_compensate(0, serT, tmp, "HDDCredit");
-  //   print_credit();
-  //   // free(tmp);
-  //   remove_req_from_queue_head(user[0].hddQueue);
-  //   c = getchar();
-    
-  // }
-
-
-  // while(1) {
-  //   REQ *r = remove_req_from_queue_head(hostQueue);
-  //   if(r == NULL) {
-  //     break;
-  //   }
-
-  //   REQ *tmp, *tmp1;
-  //   tmp = calloc(1, sizeof(REQ));
-  //   tmp1 = calloc(1, sizeof(REQ));
-  //   copy_req(r, tmp);
-  //   copy_req(r, tmp1);
-  //   printf("HDD Service Time: %f\n", get_service_time(KEY_MSQ_DISKSIM_2, MSG_TYPE_DISKSIM_2, tmp1));
-  //   char c = getchar();
-  //   printf("SSD Service Time: %f\n", get_service_time(KEY_MSQ_DISKSIM_1, MSG_TYPE_DISKSIM_1, tmp));
-  //   free(tmp);
-  //   free(tmp1);
-  //   c = getchar();
-  // }
-  
   
   // Waiting for SSDsim and HDDsim process
   wait(NULL);

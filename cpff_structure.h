@@ -96,6 +96,10 @@
 
   bool is_empty_queue(QUE *Que);
 
+  bool are_all_user_ssd_queue_empty(userInfo *user);
+  
+  bool are_all_user_hdd_queue_empty(userInfo *user);
+
   /*印出queue的內容*/ 
   void print_queue_content(QUE *Que, char *queueName);
 

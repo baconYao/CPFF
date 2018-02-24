@@ -49,7 +49,7 @@
   
 	#define SSD_N_ELEMENTS 1 //SSD Channels //No multi channel
 
-  #define TIME_PERIOD 1000 //ms  //VSSD uses 1000.0
+  #define TIME_PERIOD 1000.0 //ms  //VSSD uses 1000.0
 
   /*credit*/
   #define INIT_CREDIT (TIME_PERIOD*SSD_N_ELEMENTS)		//The initial credit
