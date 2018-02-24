@@ -25,6 +25,10 @@
 	/*Credit 補償*/ 
 	void credit_compensate(unsigned userno, double serviceTime, REQ *r, char *creditType);
 
+	void ssd_credit_scheduler(userInfo *user, QUE *ssdDeviceQueue);
+
+	void hdd_credit_scheduler(userInfo *user, QUE *hddDeviceQueue);
+
 	/*印出所有user的credit*/
 	void print_credit();
 

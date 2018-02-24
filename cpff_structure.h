@@ -76,14 +76,17 @@
   /*建立device queue list*/
   QUE *build_device_queue(char *qType);
 
-  /*將request加入到host queue*/
+  /*將request加入到host queue tail*/
   bool insert_req_to_host_que_tail(QUE *hostQ, REQ *r);
+
+  /*將request加入到user queue tail*/
+  bool insert_req_to_user_que_tail(userInfo *user, char *qType, REQ *r);
+
+  /*將request加入到device queue tail*/
+  bool insert_req_to_device_que_tail(QUE *deviceQ, REQ *r);
 
   /*從queue的head端將request移出*/
   void remove_req_from_queue_head(QUE *Que);
-
-  /*將request加入到user_queue*/
-  bool insert_req_to_user_que_tail(userInfo *user, char *qType, REQ *r);
 
   /*取得所有requests(sub-requests)的總數*/ 
   unsigned long get_total_reqs();

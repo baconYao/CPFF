@@ -79,7 +79,7 @@ bool insert_req_to_host_que_tail(QUE *hostQ, REQ *r) {
 }
 
 /**
- * [從尾端(tail)將request放進User Queue並轉換以Page為單位的requests]
+ * [從尾端(tail)將request放進User Queue]
  * @param {userInfo} user [整個系統的所有user的array]
  * @param {char*} qType [user queue的類型]
  * @param {REQ*} r [系統定義的Req pointer]
@@ -124,6 +124,30 @@ bool insert_req_to_user_que_tail(userInfo *user, char *qType, REQ *r) {
 }
 
 /**
+ * [從尾端(tail)將request放進Device Queue]
+ * @param {userInfo} user [整個系統的所有user的array]
+ * @param {REQ*} r [系統定義的Req pointer]
+ */
+bool insert_req_to_device_que_tail(QUE *deviceQ, REQ *r) {
+
+  if(deviceQ->head == NULL) {            //第一個request
+    deviceQ->head = calloc(1, sizeof(QUE_ITEM));
+    deviceQ->tail = deviceQ->head;
+    copy_req(r, &(deviceQ->head->r));
+  } else {
+    QUE_ITEM *tmp;
+    tmp = calloc(1, sizeof(QUE_ITEM));
+    copy_req(r, &(tmp->r));
+    tmp->front_req = deviceQ->tail;
+    deviceQ->tail->back_req = tmp;
+    deviceQ->tail = tmp;
+  }
+  deviceQ->size++;
+  
+  return true;
+}
+
+/**
  * [從頭端(head)將request移出Queue]
  * @param {QUE*} Que[指定的queue]
  * @return {REQ}
@@ -134,19 +158,13 @@ void remove_req_from_queue_head(QUE *Que) {
   // printf("user num: %u\n", Que->head->back_req->back_req->r.userno);
   // printf("Que size %d\n", Que->size);
   
-  /*Que is empty, return nothing*/
-  if(is_empty_queue(Que)) {
-    printf(CYAN_BOLD_ITALIC"Queue is empty!\n"COLOR_RESET);
-    return;  
-  }
-
   QUE_ITEM *tmp = Que->head;
 
   /*Only one request in queue*/ 
   if(Que->size == 1) {
     Que->size--;
-    free(Que->head);
     Que->head = Que->tail = NULL;
+    free(tmp);
     return;
   }
 

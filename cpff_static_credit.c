@@ -99,9 +99,71 @@ void credit_compensate(unsigned userno, double serviceTime, REQ *r, char *credit
 /**
  * [根據Credit策略，將user ssd queue內的request送至ssd device queue內]
  * @param {userInfo *} user [users' information]
+ * @param {QUE *} ssdDeviceQueue [ssd device queue pointer]
  */
-void ssd_credit_scheduler(userInfo *user) {
+void ssd_credit_scheduler(userInfo *user, QUE *ssdDeviceQueue) {
+  int i;
+  for(i = 0; i < NUM_OF_USER; i++) {
+    while(1) {
+      if(is_empty_queue(user[i].ssdQueue) || userSSDCredit[i] <= 0) {
+        break;
+      }
 
+      REQ *tmp;
+      tmp = calloc(1, sizeof(REQ));
+      copy_req(&(user[i].ssdQueue->head->r), tmp);
+
+      /*移除user ssd queue的head指向的request*/
+      remove_req_from_queue_head(user[i].ssdQueue);
+
+      insert_req_to_device_que_tail(ssdDeviceQueue, tmp);
+
+      /*pre charge ssd credit*/ 
+      credit_pre_charge(i, tmp, "SSDCredit");
+
+      print_REQ(tmp, "BBB");
+      print_credit();
+      print_queue_content(ssdDeviceQueue, "SSD Device Queue");
+
+      /* release variable */
+      free(tmp);
+    }
+  }
+}
+
+/**
+ * [根據Credit策略，將user hdd queue內的request送至hdd device queue內]
+ * @param {userInfo *} user [users' information]
+ * @param {QUE *} hddDeviceQueue [hdd device queue pointer]
+ */
+void hdd_credit_scheduler(userInfo *user, QUE *hddDeviceQueue) {
+  int i;
+  for(i = 0; i < NUM_OF_USER; i++) {
+    while(1) {
+      if(is_empty_queue(user[i].hddQueue) || userHDDCredit[i] <= 0) {
+        break;
+      }
+
+      REQ *tmp;
+      tmp = calloc(1, sizeof(REQ));
+      copy_req(&(user[i].hddQueue->head->r), tmp);
+
+      /*移除user ssd queue的head指向的request*/
+      remove_req_from_queue_head(user[i].hddQueue);
+
+      insert_req_to_device_que_tail(hddDeviceQueue, tmp);
+
+      /*pre charge ssd credit*/ 
+      credit_pre_charge(i, tmp, "HDDCredit");
+
+      print_REQ(tmp, "AAA");
+      print_credit();
+      print_queue_content(hddDeviceQueue, "HDD Device Queue");
+
+      /* release variable */
+      free(tmp);
+    }
+  }
 }
 
 /**
