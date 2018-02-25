@@ -51,20 +51,24 @@
     * 此紀錄係針對整體系統，無視User個別的紀錄
     */
     typedef struct pcStat {
-    unsigned long totalReq;		//Request數量
-    unsigned long ssdReq;		//SSD Request數量
-    unsigned long totalUserReq;	//User Request數量
-    unsigned long UserRReq;		//User Read Request數量
-    unsigned long totalSysReq;	//System Request數量
+    unsigned long totalReq;		//Request數量 (include user and system request)
+    unsigned long totalSsdReq;		//SSD Request數量 (include user and system ssd request)
+    unsigned long totalHddReq;		//HDD Request數量 (include user and system hdd request)
+    unsigned long totalUserReq;	  //User Request數量
+    unsigned long userReadReq;		//User Read Request數量
+    unsigned long userWriteReq;		//User Write Request數量
+    unsigned long totalSysReq;	  //System Request數量
+    unsigned long sysSsdReadReq;			//System SSD Read Request數量
+    unsigned long sysSsdWriteReq;			//System SSD Write Request數量
+    unsigned long sysHddWriteReq;			//System HDD Write Request數量
     unsigned long evictCount;	//Eviction次數
     unsigned long dirtyCount;	//Dirty Block Eviction次數
     unsigned long hitCount;		//Hit次數
     unsigned long missCount;	//Miss次數
-    double serviceTime;			//Service time for system
   } PCSTAT;
 
   /*PC STATISTICS*/
-  static PCSTAT pcst = {0,0,0,0,0,0,0,0,0,0};
+  static PCSTAT pcst = {0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
   /*取得Metadata Block 數量*/
   unsigned long get_meta_cnt(int userno);

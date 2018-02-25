@@ -44,24 +44,28 @@
   /*定義user的structure格式*/
   typedef struct userInfo {
     unsigned int globalWeight;    // 全域的weight
-    unsigned int credit;      // 此輪的credit
-    unsigned long totalReq;				//Request數量
-    unsigned long ssdReq;				//SSD Request數量
+    unsigned long totalReq;				//Request數量 (include user and system request)
+    unsigned long totalSsdReq;		//SSD Request數量 (include user and system ssd request)
+    unsigned long totalHddReq;		//HDD Request數量 (include user and system hdd request)
     unsigned long totalUserReq;			//User Request數量
-    unsigned long UserReqInPeriod;		//User Request in one period數量
-    unsigned long UserRReq;				//User Read Request數量
-    unsigned long UserWReq;				//User Write Request數量
-    unsigned long totalSysReq;			//System Request數量
-    unsigned long SysSsdReadReq;			//System SSD Read Request數量
-    unsigned long SysSsdWriteReq;			//System SSD Write Request數量
-    unsigned long SysHddWriteReq;			//System HDD Write Request數量
+    unsigned long userReadReq;				//User Read Request數量
+    unsigned long userWriteReq;				//User Write Request數量
+    unsigned long userReadReqInPeriod;		//User Read Request in one period數量 (Value reset to 0 when credit replenish)
+    unsigned long sysSsdReadReqInPeriod;		//System Read Request in one period數量 (Value reset to 0 when credit replenish)
+    unsigned long userWriteReqInPeriod;		//User Write Request in one period數量 (Value reset to 0 when credit replenish)
+    unsigned long sysSsdWriteReqInPeriod;		//System Write Request in one period數量 (Value reset to 0 when credit replenish)
+    unsigned long sysHddWriteReqInPeriod;		//System Write Request in one period數量 (Value reset to 0 when credit replenish)
+    unsigned long totalSysReq;			  //System Request數量
+    unsigned long sysSsdReadReq;			//System SSD Read Request數量
+    unsigned long sysSsdWriteReq;			//System SSD Write Request數量
+    unsigned long sysHddWriteReq;			//System HDD Write Request數量
     unsigned long evictCount;			//Eviction次數
     unsigned long dirtyCount;			//Dirty Page Eviction次數
     unsigned long hitCount;				//Hit次數
     unsigned long missCount;			//Miss次數
-    double resTime;						//Response time for users
-    double resTimeInPeriod;				//Response time for users in one period
-    double cachingSpace;				//占用SSD的比例
+    double resTime;					    	//All Response time for users
+    double resTimeInPeriod;				//Response time for users in one period, Value reset to 0 when credit replenish
+    double cachingSpace;				//占用SSD的比例 (Maybe changed each period)
     QUE *ssdQueue;
     QUE *hddQueue;
   } userInfo;
