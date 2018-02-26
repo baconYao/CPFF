@@ -3,6 +3,7 @@
 QUE *hostQueue;                   //claim host queue
 QUE *ssdDeviceQueue;              //claim SSD device queue
 QUE *hddDeviceQueue;              //claim HDD device queue
+systemInfo sysInfo;               //Record system information
 userInfo user[NUM_OF_USER];       //建立user
 pid_t SSDsimProc, HDDsimProc;     //Sub-process id: SSD and HDD simulator
 
@@ -122,6 +123,27 @@ void initialize(char *par[]) {
     print_error(-1, "Can't build Host Queue");
   }
 
+  /*初始化system資訊*/
+  sysInfo.totalUserReq = 0;			
+  sysInfo.userReadReq = 0;				
+  sysInfo.userWriteReq = 0;				
+  sysInfo.doneSsdSysReq = 0;			
+  sysInfo.doneHddSysReq = 0;			
+  sysInfo.doneSsdSysReqInPeriod = 0;			
+  sysInfo.doneHddSysReqInPeriod = 0;			
+  sysInfo.doneSsdUserReq = 0;			
+  sysInfo.doneHddUserReq = 0;			
+  sysInfo.doneSsdUserReqInPeriod = 0;			
+  sysInfo.doneHddUserReqInPeriod = 0;			
+  sysInfo.userSsdReqResTime = 0.0;				    	
+  sysInfo.userHddReqResTime = 0.0;				    	
+  sysInfo.userSsdReqResTimeInPeriod = 0.0;					    	
+  sysInfo.userHddReqResTimeInPeriod = 0.0;					    	
+  sysInfo.sysSsdReqResTime = 0.0;					    	
+  sysInfo.sysHddReqResTime = 0.0;					    	
+  sysInfo.sysSsdReqResTimeInPeriod = 0.0;				
+  sysInfo.sysHddReqResTimeInPeriod = 0.0;				
+
   /*初始化user資訊*/
   int i = 0;
   unsigned weight = 0;
@@ -145,12 +167,26 @@ void initialize(char *par[]) {
     user[i].sysSsdReadReq = 0;
     user[i].sysSsdWriteReq = 0;
     user[i].sysHddWriteReq = 0;
+    user[i].doneSsdSysReq = 0;
+    user[i].doneHddSysReq = 0;
+    user[i].doneSsdSysReqInPeriod = 0;
+    user[i].doneHddSysReqInPeriod = 0;
+    user[i].doneSsdUserReq = 0;
+    user[i].doneHddUserReq = 0;
+    user[i].doneSsdUserReqInPeriod = 0;
+    user[i].doneHddUserReqInPeriod = 0;
     user[i].evictCount = 0;
     user[i].dirtyCount = 0;
     user[i].hitCount = 0;
     user[i].missCount = 0;
-    user[i].resTime = 0;
-    user[i].resTimeInPeriod = 0;
+    user[i].userSsdReqResTime = 0.0;
+    user[i].userHddReqResTime = 0.0;
+    user[i].userSsdReqResTimeInPeriod = 0.0;
+    user[i].userHddReqResTimeInPeriod = 0.0;
+    user[i].sysSsdReqResTime = 0.0;
+    user[i].sysHddReqResTime = 0.0;
+    user[i].sysSsdReqResTimeInPeriod = 0.0;
+    user[i].sysHddReqResTimeInPeriod = 0.0;
     user[i].cachingSpace = 0;
 
     totalWeight += weight;              //累加所有user的globalWeight
@@ -185,6 +221,14 @@ void initialize(char *par[]) {
     fscanf(trace, "%lf%u%lu%u%u%u", &tmp->arrivalTime, &tmp->devno, &tmp->diskBlkno, &tmp->reqSize, &tmp->reqFlag, &tmp->userno);
     tmp->isSystemRequest = 0;    //default value: 0
     tmp->preChargeValue = 0.0;    //default value: 0.0
+
+    /*Statistics. 在request送進host queue時，即可累計*/
+    sysInfo.totalUserReq++;
+    if(tmp->reqFlag == DISKSIM_READ) {
+      sysInfo.userReadReq++;
+    } else {
+      sysInfo.userWriteReq++;
+    }
 
     /*將request放進host queue*/ 
     if(!insert_req_to_host_que_tail(hostQueue, tmp)) {
@@ -234,32 +278,36 @@ void execute_CPFF_framework() {
     /* we can send ssd request to SSD sim */
     if(cpffSystemTime == ssdReqCompleteTime) {
       if(!is_empty_queue(ssdDeviceQueue)) {
-        // printf("Is do SSD req\n");
         REQ *ssdTmp;  
         ssdTmp = &(ssdDeviceQueue->head->r);    //取得SSD device queue內的head pointer指向的request
-        // print_REQ(ssdTmp, "SSD REQ");
         ssdServiceTime = get_service_time(KEY_MSQ_DISKSIM_1, MSG_TYPE_DISKSIM_1, ssdTmp);   //送進SSD sim，獲得此request的service time
+        ssdTmp->responseTime = ssdServiceTime;
         credit_compensate(ssdTmp->userno-1, ssdServiceTime, ssdTmp, "SSDCredit");   //進行credit的補償
         ssdReqCompleteTime = ssdServiceTime + cpffSystemTime;   //推進下個ssd device queue 內 request可以做的時間
-        // printf(COLOR_RB"ssdReqCompleteTime: %f\n"COLOR_RESET, ssdReqCompleteTime);
+        
+        //statistics
+        statistics_done_func(ssdTmp, "SSD");
+
         remove_req_from_queue_head(ssdDeviceQueue);
-        // print_queue_content(ssdDeviceQueue, "SSD Device Queue");
+      
+        
       }
     }
 
     /* we can send hdd request to HDD sim */
     if(cpffSystemTime == hddReqCompleteTime) {
       if(!is_empty_queue(hddDeviceQueue)) {
-        // printf("Is do HDD req\n");
         REQ *hddTmp;
         hddTmp = &(hddDeviceQueue->head->r);    //取得HDD device queue內的head pointer指向的request
-        // print_REQ(hddTmp, "HDD REQ");
         hddServiceTime = get_service_time(KEY_MSQ_DISKSIM_2, MSG_TYPE_DISKSIM_2, hddTmp);   //送進HDD sim，獲得此request的service time
+        hddTmp->responseTime = hddServiceTime;
         credit_compensate(hddTmp->userno-1, hddServiceTime, hddTmp, "HDDCredit");     //進行credit的補償
         hddReqCompleteTime = hddServiceTime + cpffSystemTime;   //推進下個hdd device queue 內 request可以做的時間
-        // printf(COLOR_YB"hddReqCompleteTime: %f\n"COLOR_RESET, hddReqCompleteTime);
+        
+        //statistics
+        statistics_done_func(hddTmp, "HDD");
+        
         remove_req_from_queue_head(hddDeviceQueue);
-        // print_queue_content(hddDeviceQueue, "HDD Device Queue");
       }
     }
     
@@ -291,6 +339,7 @@ void execute_CPFF_framework() {
   }
 }
 
+/*[推進系統時間]*/
 double shift_cpffSystemTime(double ssdReqCompleteTime, double hddReqCompleteTime) {
   double minimal = nextReplenishCreditTime;
   /*若只要ssd device queue 或 所有user ssd queue其中一個不為空的，則ssdReqCompleteTime必須列入系統時間推進的參考。*/
@@ -313,6 +362,55 @@ double shift_cpffSystemTime(double ssdReqCompleteTime, double hddReqCompleteTime
   }
   
   return minimal;
+}
+
+/*[統計完成的結果]*/
+void statistics_done_func(REQ *r, char *reqType) {
+  if(!strcmp("SSD", reqType)) {     //ssd request
+    if(r->isSystemRequest) {      //ssd system request
+      sysInfo.doneSsdSysReq++;
+      sysInfo.doneSsdSysReqInPeriod++;
+      user[r->userno-1].doneSsdSysReq++;
+      user[r->userno-1].doneSsdSysReqInPeriod++;
+      sysInfo.sysSsdReqResTime += r->responseTime;
+      sysInfo.sysSsdReqResTimeInPeriod += r->responseTime;
+      user[r->userno-1].sysSsdReqResTime += r->responseTime;
+      user[r->userno-1].sysSsdReqResTimeInPeriod += r->responseTime;
+      return;
+    } else {    //ssd user request
+      sysInfo.doneSsdUserReq++;
+      sysInfo.doneSsdUserReqInPeriod++;
+      user[r->userno-1].doneSsdUserReq++;
+      user[r->userno-1].doneSsdUserReqInPeriod++;
+      sysInfo.userSsdReqResTime += r->responseTime;
+      sysInfo.userSsdReqResTimeInPeriod += r->responseTime;
+      user[r->userno-1].userSsdReqResTime += r->responseTime;
+      user[r->userno-1].userSsdReqResTimeInPeriod += r->responseTime;
+      return;
+    }
+  } else {
+    if(r->isSystemRequest) {      //hdd system request
+      sysInfo.doneHddSysReq++;
+      sysInfo.doneHddSysReqInPeriod++;
+      user[r->userno-1].doneHddSysReq++;
+      user[r->userno-1].doneHddSysReqInPeriod++;
+      sysInfo.sysHddReqResTime += r->responseTime;
+      sysInfo.sysHddReqResTimeInPeriod += r->responseTime;
+      user[r->userno-1].sysHddReqResTime += r->responseTime;
+      user[r->userno-1].sysHddReqResTimeInPeriod += r->responseTime;
+      return;
+    } else {    //hdd user request
+      sysInfo.doneHddUserReq++;
+      sysInfo.doneHddUserReqInPeriod++;
+      user[r->userno-1].doneHddUserReq++;
+      user[r->userno-1].doneHddUserReqInPeriod++;
+      sysInfo.userHddReqResTime += r->responseTime;
+      sysInfo.userHddReqResTimeInPeriod += r->responseTime;
+      user[r->userno-1].userHddReqResTime += r->responseTime;
+      user[r->userno-1].userHddReqResTimeInPeriod += r->responseTime;
+      return;
+    }
+  }
 }
 
 int main(int argc, char *argv[]) {

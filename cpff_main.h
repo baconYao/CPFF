@@ -33,3 +33,4 @@ void rm_disksim();
 void initialize(char *par[]);
 void execute_CPFF_framework();
 double shift_cpffSystemTime(double ssdReqCompleteTime, double hddReqCompleteTime);
+void statistics_done_func(REQ *r, char *reqType);
