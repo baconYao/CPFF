@@ -255,7 +255,7 @@ double meta_block_search_by_user_with_min_prize(unsigned userno) {
  * @param {userInfo *} user [all user]
  * @param {QUE *} hostQueue [hostQueue pointer]
  */
-void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
+void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, systemInfo *sysInfo) {
 
   int flag = 0;           //The flag of page
 
@@ -283,6 +283,8 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
     if (tmp->reqFlag == DISKSIM_READ) {
       flag = PAGE_FLAG_CLEAN;
       //Statistics
+      sysInfo->totalReq++;
+      sysInfo->userReadReqInPeriod++;
       pcst.userReadReq++;
       pcst.totalReq++;
       pcst.totalUserReq++;
@@ -294,6 +296,8 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
     else {
       flag = PAGE_FLAG_DIRTY;
       //Statistics
+      sysInfo->totalReq++;
+      sysInfo->userWriteReqInPeriod++;
       pcst.userWriteReq++;
       pcst.totalReq++;
       pcst.totalUserReq++;
@@ -332,6 +336,7 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
       tmp->diskBlkno = ssd_page_to_sim_sector(cache->pageno);
 
       //statistic
+      sysInfo->totalSsdReq++;
       pcst.totalSsdReq++;
       user[tmp->userno-1].totalSsdReq++;
       
@@ -343,6 +348,7 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
 
     } else {   /*cache Miss: Page not found in cache*/  
       //Statistics
+      sysInfo->missCount++;
       pcst.missCount++;
       user[tmp->userno-1].missCount++;
 
@@ -390,6 +396,12 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
             free(r);
 
             //Statistics
+            sysInfo->totalReq++;      //for system ssd write req
+            sysInfo->totalHddReq++;       //for user hdd read req
+            sysInfo->totalSsdReq++;       //for system ssd write req
+            sysInfo->totalSysReq++;       //for system ssd write req
+            sysInfo->sysSsdWriteReq++;    //for system ssd write req
+            sysInfo->sysSsdWriteReqInPeriod++;   //for system ssd write req
             pcst.totalReq++;      //for system ssd write req
             pcst.totalHddReq++;       //for user hdd read req
             pcst.totalSsdReq++;       //for system ssd write req
@@ -412,6 +424,7 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
             }
 
             //Statistics
+            sysInfo->totalSsdReq++;
             pcst.totalSsdReq++;
             user[tmp->userno-1].totalSsdReq++;
             
@@ -472,6 +485,14 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
               }
 
               //Statistics
+              sysInfo->totalSsdReq++;    //for sys read ssd
+              sysInfo->totalHddReq++;    //for sys write hdd
+              sysInfo->totalSysReq += 2;    //for sys read ssd and sys write hdd
+              sysInfo->sysSsdReadReq ++;    //for sys read ssd
+              sysInfo->sysHddWriteReq ++;    //for sys write hdd
+              sysInfo->dirtyCount++;
+              sysInfo->sysSsdReadReqInPeriod++;    //for sys read ssd
+              sysInfo->sysHddWriteReqInPeriod++;    //for sys write hdd
               pcst.totalSsdReq++;    //for sys read ssd
               pcst.totalHddReq++;    //for sys write hdd
               pcst.totalSysReq += 2;    //for sys read ssd and sys write hdd
@@ -493,6 +514,7 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
               free(r2);
             }
             //Statistics
+            sysInfo->evictCount++;
             pcst.evictCount++;
             user[tmp->userno-1].evictCount++;
             
@@ -528,6 +550,12 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
                 }
 
                 //Statistics
+                sysInfo->totalReq++;      //for system ssd write req
+                sysInfo->totalHddReq++;       //for user hdd read req
+                sysInfo->totalSsdReq++;       //for system ssd write req
+                sysInfo->totalSysReq++;       //for system ssd write req
+                sysInfo->sysSsdWriteReq++;    //for system ssd write req
+                sysInfo->sysSsdWriteReqInPeriod++;   //for system ssd write req;
                 pcst.totalReq++;      //for system ssd write req
                 pcst.totalHddReq++;       //for user hdd read req
                 pcst.totalSsdReq++;       //for system ssd write req
@@ -551,6 +579,7 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue) {
                 }
 
                 //Statistics
+                sysInfo->totalSsdReq++;
                 pcst.totalSsdReq++;
                 user[tmp->userno-1].totalSsdReq++;
               }

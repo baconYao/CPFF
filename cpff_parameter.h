@@ -28,7 +28,7 @@
   //#define SSD_BLOCK2SECTOR (SSD_BLOCK_SIZE/DISKSIM_SECTOR)
 
 
-  #define SSD_CACHING_SPACE_BY_PAGES 64 	// total pages number
+  #define SSD_CACHING_SPACE_BY_PAGES 6 	// total pages number
 	//MAX:(8*8*2048*64*8(channels) = 67108864 sectors)(67108864/PAGE2SECTOR = 8388608 pages)
   //Hint: < 6291456 page valid!
   /*
@@ -50,6 +50,7 @@
 	#define SSD_N_ELEMENTS 1 //SSD Channels //No multi channel
 
   #define TIME_PERIOD 1000.0 //ms  //VSSD uses 1000.0
+  #define STAT_FOR_TIME_PERIODS 10 // Once writeStatFile() for ? TIME_PERIODS
 
   /*credit*/
   #define INIT_CREDIT (TIME_PERIOD*SSD_N_ELEMENTS)		//The initial credit

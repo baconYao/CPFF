@@ -8,12 +8,14 @@ userInfo user[NUM_OF_USER];       //建立user
 pid_t SSDsimProc, HDDsimProc;     //Sub-process id: SSD and HDD simulator
 
 FILE *trace;          //讀取的trace
+FILE *systemResultFile;     //The final record
+// FILE *eachUserPeriodRecord[NUM_OF_USER];   //Every users' records in each period
 char *par[6];         //CPFF system arguments
 int totalWeight = 0;  //所有user的global weight累加
 double cpffSystemTime = 0.0;      //cpff的系統時間
 double ssdReqCompleteTime = 0.0;      //表示被送進SSD sim 的SSD request在系統時間(cpffSystemTime)的甚麼時候做完。 (ssdReqCompleteTime = request servie time + cpffSystemTime)
 double hddReqCompleteTime = 0.0;      //表示被送進HDD sim 的HDD request在系統時間(cpffSystemTime)的甚麼時候做完。 (hddReqCompleteTime = request servie time + cpffSystemTime)
-double nextReplenishCreditTime = 1000.0;    //credit重新補充的時間，每次加1000.0(ms)，預設為1000.0ms = 1 second
+double nextReplenishCreditTime = TIME_PERIOD;    //credit重新補充的時間，每次加1000.0(ms)，預設為1000.0ms = 1 second
 bool doSsdRequest = false;      //表示是否可將SSD device queue的request送到SSD sim執行 (預設為false)
 bool doHddRequest = false;      //表示是否可將HDD device queue的request送到HDD sim執行 (預設為false)
 
@@ -86,7 +88,6 @@ void rm_disksim() {
   rm_MSQ();
 }
 
-
 /**
  * [系統初始化]
  */
@@ -116,6 +117,8 @@ void initialize(char *par[]) {
     print_error(-1, "Trace file open failed ");
   }
 
+  
+
   /*建立host queue*/
   hostQueue = build_host_queue();
   // printf("Host queue's memory address: %p\n", &hostQueue);
@@ -124,9 +127,25 @@ void initialize(char *par[]) {
   }
 
   /*初始化system資訊*/
+  sysInfo.totalReq = 0;			
+  sysInfo.totalSsdReq = 0;			
+  sysInfo.totalHddReq = 0;			
   sysInfo.totalUserReq = 0;			
   sysInfo.userReadReq = 0;				
-  sysInfo.userWriteReq = 0;				
+  sysInfo.userWriteReq = 0;	
+  sysInfo.userReadReqInPeriod = 0;
+  sysInfo.sysSsdReadReqInPeriod = 0;
+  sysInfo.userWriteReqInPeriod = 0;
+  sysInfo.sysSsdWriteReqInPeriod = 0;
+  sysInfo.sysHddWriteReqInPeriod = 0;			
+  sysInfo.totalSysReq = 0;				
+  sysInfo.sysSsdReadReq = 0;				
+  sysInfo.sysSsdWriteReq = 0;				
+  sysInfo.sysHddWriteReq = 0;				
+  sysInfo.evictCount = 0;				
+  sysInfo.dirtyCount = 0;				
+  sysInfo.hitCount = 0;				
+  sysInfo.missCount = 0;				
   sysInfo.doneSsdSysReq = 0;			
   sysInfo.doneHddSysReq = 0;			
   sysInfo.doneSsdSysReqInPeriod = 0;			
@@ -222,25 +241,17 @@ void initialize(char *par[]) {
     tmp->isSystemRequest = 0;    //default value: 0
     tmp->preChargeValue = 0.0;    //default value: 0.0
 
-    /*Statistics. 在request送進host queue時，即可累計*/
-    sysInfo.totalUserReq++;
-    if(tmp->reqFlag == DISKSIM_READ) {
-      sysInfo.userReadReq++;
-    } else {
-      sysInfo.userWriteReq++;
-    }
-
     /*將request放進host queue*/ 
-    if(!insert_req_to_host_que_tail(hostQueue, tmp)) {
+    if(!insert_req_to_host_que_tail(hostQueue, tmp, &sysInfo)) {
       print_error(-1, "[Error] request to host queue!");
     }
-
   }
   /*釋放trace File descriptor*/ 
   fclose(trace);
   free(tmp);
-};
 
+  printf("Total user requests: %lu\tUser read requests: %lu\tUser write requests: %lu\n", sysInfo.totalUserReq, sysInfo.userReadReq, sysInfo.userWriteReq);
+};
 
 /**
  * [cpff主程式]
@@ -249,15 +260,15 @@ void execute_CPFF_framework() {
   printf("Press enter to continue program.\n");
   char c = getchar();
   
-  
+  int index = 1;        //the final value is same as the sysInfo.totalReq
   while(1) {
     double ssdServiceTime, hddServiceTime;
     
-    printf(COLOR_BB"\nCPFF System Time: %f\n"COLOR_RESET, cpffSystemTime);
+    printf(COLOR_BB"\nIndex: %d\tCPFF System Time: %f\n"COLOR_RESET, index++, cpffSystemTime);
     print_credit();
     
     /*執行prize caching，根據系統時間(cpffSystemTime)將host queue內的request送至對應的user queue內*/ 
-    prize_caching(cpffSystemTime, user, hostQueue);
+    prize_caching(cpffSystemTime, user, hostQueue, &sysInfo);
 
     /*檢查ssd device queue內是否有request，若沒有，則啟動ssd credit base scheduler從user ssd queue內抓取request到ssd device queue*/
     if(is_empty_queue(ssdDeviceQueue)) {
@@ -311,24 +322,37 @@ void execute_CPFF_framework() {
       }
     }
     
-    // printf(COLOR_RB"ssdReqCompleteTime: %f\n"COLOR_RESET, ssdReqCompleteTime);
-    // printf(COLOR_RB"ssd device queue size: %d\n"COLOR_RESET, ssdDeviceQueue->size);
-    // printf(COLOR_YB"hddReqCompleteTime: %f\n"COLOR_RESET, hddReqCompleteTime);
-    // printf(COLOR_YB"hdd device queue size: %d\n"COLOR_RESET, hddDeviceQueue->size);
-    // if(!is_empty_queue(hostQueue)) {
-    //   printf("Next request arrival time: %f\n", hostQueue->head->r.arrivalTime);
-    // }
-    
     /*推進系統時間*/
     cpffSystemTime = shift_cpffSystemTime(ssdReqCompleteTime, hddReqCompleteTime);
     
-    /*每1000ms，重新補充credit*/
+    /*每TIME_PERIOD，重新補充credit*/
     if(cpffSystemTime == nextReplenishCreditTime) {
+      printf("\nTotal request: %lu\n", sysInfo.totalReq);
+      printf("Total user requests: %lu\t(User read requests: %lu\tUser write requests: %lu)\n", sysInfo.totalUserReq, sysInfo.userReadReq, sysInfo.userWriteReq);
+      printf("Total system request: %lu\n", sysInfo.totalSysReq);
+      printf("Total SSD request: %lu\n", sysInfo.totalSsdReq);
+      printf("Total HDD request: %lu\n", sysInfo.totalHddReq);
+      printf("Total SSD system read request: %lu\n", sysInfo.sysSsdReadReq);
+      printf("Total SSD system write request: %lu\n", sysInfo.sysSsdWriteReq);
+      printf("Total HDD system write request: %lu\n\n", sysInfo.sysHddWriteReq);
+      printf("doneSsdSysReq: %lu\n", sysInfo.doneSsdSysReq);
+      printf("doneSsdSysReqInPeriod: %lu\n", sysInfo.doneSsdSysReqInPeriod);
+      printf("doneHddSysReq: %lu\n", sysInfo.doneHddSysReq);
+      printf("doneHddSysReqInPeriod: %lu\n\n", sysInfo.doneHddSysReqInPeriod);
+      printf("doneSsdUserReq: %lu\n", sysInfo.doneSsdUserReq);
+      printf("doneHddUserReq: %lu\n", sysInfo.doneHddUserReq);
+      printf("doneSsdUserReqInPeriod: %lu\n", sysInfo.doneSsdUserReqInPeriod);
+      printf("doneHddUserReqInPeriod: %lu\n\n", sysInfo.doneHddUserReqInPeriod);
+      printf("userSsdReqResTime: %f\n", sysInfo.userSsdReqResTime);
+      printf("userHddReqResTime: %f\n", sysInfo.userHddReqResTime);
+      printf("userSsdReqResTimeInPeriod: %f\n", sysInfo.userSsdReqResTimeInPeriod);
+      printf("userHddReqResTimeInPeriod: %f\n", sysInfo.userHddReqResTimeInPeriod);
+      record_statistics(&sysInfo, user);
       print_credit();
       if(credit_replenish(user, totalWeight) != 0) {
         print_error(-1, "Can't replenish user credit!");
       }
-      nextReplenishCreditTime += 1000.0;
+      nextReplenishCreditTime += TIME_PERIOD;
       printf(CYAN_BOLD_ITALIC"Credit Replenish!!!!\n"COLOR_RESET);
       print_credit();
       c = getchar();
@@ -413,6 +437,25 @@ void statistics_done_func(REQ *r, char *reqType) {
   }
 }
 
+void record_statistics(systemInfo *sysInfo, userInfo *user) {
+  if(sysInfo != NULL) {
+    char *dir="./cpff_statistics_dir/System_Record.json";
+    if((systemResultFile = fopen(dir, "a+")) == NULL) {
+      print_error(-1, "Can't open the cpff_statistics_dir/System_Record.txt file");
+    }
+    fprintf(systemResultFile, "[{\n");
+
+    fprintf(systemResultFile, "Total request: %lu\n", sysInfo->totalReq);
+    fprintf(systemResultFile, "Total user requests: %lu\t(Read: %lu\tWrite: %lu)\n", sysInfo->totalUserReq, sysInfo->userReadReq, sysInfo->userWriteReq);
+    fprintf(systemResultFile, "Total system requests: %lu\t(Read: %lu\tWrite: %lu)\n", sysInfo->totalSysReq);
+    fprintf(systemResultFile, "-----------------------------\n");
+    fprintf(systemResultFile, "}]\n");
+
+    fclose(systemResultFile);
+    return;
+  }
+}
+
 int main(int argc, char *argv[]) {
 
   //Check arguments
@@ -444,8 +487,6 @@ int main(int argc, char *argv[]) {
    //OR
   //printf("Main Process waits for: %d\n", wait(NULL));
   //printf("Main Process waits for: %d\n", wait(NULL));
-
-
-
+  
   return 0;
 }

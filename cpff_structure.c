@@ -47,7 +47,7 @@
  * return true [將trace所有的reuqests放入queue後即回傳]
  */
 
-bool insert_req_to_host_que_tail(QUE *hostQ, REQ *r) {
+bool insert_req_to_host_que_tail(QUE *hostQ, REQ *r, systemInfo *sysInfo) {
   /*page_count代表此request共存取多少SSD page, 意思是將request切成多個sub-requests, each sub-request size is 4 KB*/
   int page_count;
   page_count = r->reqSize/SSD_PAGE2SECTOR;
@@ -73,8 +73,14 @@ bool insert_req_to_host_que_tail(QUE *hostQ, REQ *r) {
     hostQ->size++;
   }
   
-  // printf("Request: %lf %u %lu %u %u %u\n", r->arrivalTime, r->devno, r->diskBlkno, r->reqSize, r->reqFlag, r->userno);
-  totalRequests += page_count;
+  /*Statistics*/
+  sysInfo->totalUserReq += page_count;
+  if(r->reqFlag == DISKSIM_READ) {
+    sysInfo->userReadReq += page_count;
+  } else {
+    sysInfo->userWriteReq += page_count;
+  }
+
   return true;
 }
 
@@ -207,15 +213,6 @@ void remove_req_from_queue_head(QUE *Que) {
     tmp = tmp->back_req;
   }
   printf("NULL (%u)\n"COLOR_RESET, count);
-}
-
-
-/**
- * [根據進入User queue的request數量，取得Request總數(應同於Trace筆數)]
- * @return {unsigned long} totalRequests [The num of requests]
- */
- unsigned long get_total_reqs() {
-	return totalRequests;
 }
 
 /**

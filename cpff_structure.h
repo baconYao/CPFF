@@ -21,7 +21,7 @@
     unsigned reqFlag;		//讀:1;寫:0
     unsigned userno;		//使用者編號(1~n)
     double responseTime;	//反應時間(初始為0)
-    int isSystemRequest;   // 判斷此request是user request (1) 或system request (0), default: 0
+    int isSystemRequest;   // 判斷此request是system request (1) 或user request (0), default: 0
     double preChargeValue;   // 此request的pre charge value(初始為0.0)
   } REQ;
 
@@ -51,14 +51,18 @@
     unsigned long userReadReq;				//User Read Request數量
     unsigned long userWriteReq;				//User Write Request數量
     unsigned long userReadReqInPeriod;		//User Read Request in one period數量 (Value reset to 0 when credit replenish)
-    unsigned long sysSsdReadReqInPeriod;		//System Read Request in one period數量 (Value reset to 0 when credit replenish)
     unsigned long userWriteReqInPeriod;		//User Write Request in one period數量 (Value reset to 0 when credit replenish)
-    unsigned long sysSsdWriteReqInPeriod;		//System Write Request in one period數量 (Value reset to 0 when credit replenish)
-    unsigned long sysHddWriteReqInPeriod;		//System Write Request in one period數量 (Value reset to 0 when credit replenish)
+    unsigned long sysSsdReadReqInPeriod;		//SSD System Read Request in one period數量 (Value reset to 0 when credit replenish)
+    unsigned long sysSsdWriteReqInPeriod;		//SSD System Write Request in one period數量 (Value reset to 0 when credit replenish)
+    unsigned long sysHddWriteReqInPeriod;		//SSD System Write Request in one period數量 (Value reset to 0 when credit replenish)
     unsigned long totalSysReq;			  //System Request數量
     unsigned long sysSsdReadReq;			//System SSD Read Request數量
     unsigned long sysSsdWriteReq;			//System SSD Write Request數量
     unsigned long sysHddWriteReq;			//System HDD Write Request數量
+    unsigned long evictCount;			//Eviction次數
+    unsigned long dirtyCount;			//Dirty Page Eviction次數
+    unsigned long hitCount;				//Hit次數
+    unsigned long missCount;			//Miss次數
     unsigned long doneSsdSysReq;			//紀錄已經送進SSD simulator做完的system request
     unsigned long doneHddSysReq;			//紀錄已經送進HDD simulator做完的system request
     unsigned long doneSsdSysReqInPeriod;			//紀錄已經送進SSD simulator做完的system request (Value reset to 0 when credit replenish)
@@ -67,10 +71,6 @@
     unsigned long doneHddUserReq;			//紀錄已經送進HDD simulator做完的User request
     unsigned long doneSsdUserReqInPeriod;			//紀錄已經送進SSD simulator做完的User request (Value reset to 0 when credit replenish)
     unsigned long doneHddUserReqInPeriod;			//紀錄已經送進HDD simulator做完的User request (Value reset to 0 when credit replenish)
-    unsigned long evictCount;			//Eviction次數
-    unsigned long dirtyCount;			//Dirty Page Eviction次數
-    unsigned long hitCount;				//Hit次數
-    unsigned long missCount;			//Miss次數
     double userSsdReqResTime;					    	//All user ssd requests'  response time for system
     double userHddReqResTime;					    	//All user hdd requests'  response time for system
     double userSsdReqResTimeInPeriod;				//All user ssd requests' response time for system in one period, Value reset to 0 when credit replenish
@@ -86,9 +86,25 @@
 
   /*整個系統紀錄的資訊, 無視個別user*/
   typedef struct systemInfo {
+    unsigned long totalReq;		//Request數量 (include user and system request)
+    unsigned long totalSsdReq;		//SSD Request數量 (include user and system ssd request)
+    unsigned long totalHddReq;		//HDD Request數量 (include user and system hdd request)
     unsigned long totalUserReq;			//User Request數量
     unsigned long userReadReq;				//User Read Request數量
     unsigned long userWriteReq;				//User Write Request數量
+    unsigned long userReadReqInPeriod;		//User Read Request in one period數量 (Value reset to 0 when credit replenish)
+    unsigned long userWriteReqInPeriod;		//User Write Request in one period數量 (Value reset to 0 when credit replenish)
+    unsigned long sysSsdReadReqInPeriod;		//SSD System Read Request in one period數量 (Value reset to 0 when credit replenish)
+    unsigned long sysSsdWriteReqInPeriod;		//SSD System Write Request in one period數量 (Value reset to 0 when credit replenish)
+    unsigned long sysHddWriteReqInPeriod;		//SSD System Write Request in one period數量 (Value reset to 0 when credit replenish)
+    unsigned long totalSysReq;	  //System Request數量
+    unsigned long sysSsdReadReq;			//System SSD Read Request數量
+    unsigned long sysSsdWriteReq;			//System SSD Write Request數量
+    unsigned long sysHddWriteReq;			//System HDD Write Request數量
+    unsigned long evictCount;	//Eviction次數
+    unsigned long dirtyCount;	//Dirty Block Eviction次數
+    unsigned long hitCount;		//Hit次數
+    unsigned long missCount;	//Miss次數
     unsigned long doneSsdSysReq;			//紀錄已經送進SSD simulator做完的system request
     unsigned long doneHddSysReq;			//紀錄已經送進HDD simulator做完的system request
     unsigned long doneSsdSysReqInPeriod;			//紀錄已經送進SSD simulator做完的system request (Value reset to 0 when credit replenish)
@@ -114,7 +130,7 @@
   /*建立device queue list*/
   QUE *build_device_queue(char *qType);
   /*將request加入到host queue tail*/
-  bool insert_req_to_host_que_tail(QUE *hostQ, REQ *r);
+  bool insert_req_to_host_que_tail(QUE *hostQ, REQ *r, systemInfo *sysInfo);
   /*將request加入到user queue tail*/
   bool insert_req_to_user_que_tail(userInfo *user, char *qType, REQ *r);
   /*將request加入到device queue tail*/

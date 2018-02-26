@@ -8,6 +8,14 @@ hddout='./hddsim.out'
 
 cache='c32768_none'
 
+resultDir='./cpff_statistics_dir'     #This dirctoy is used to store some records.
+
+#if there isn't exist this dirctory, then we create it.
+if [ ! -d "$resultDir" ]; then
+  echo "Create $resultDir"
+  mkdir $resultDir
+fi
+
 #Workload
 # One user
 #traceU1=''
@@ -40,5 +48,4 @@ echo ""
 
 
 echo "Run cpff......"
-#./yusim "./../../yusim_trace/${traceU2}.yt" $ssd_parv $ssdout $hdd_parv $hddout "./output/${traceU2}_${cache}.stat" "./output/${traceU2}_${cache}.result"
 ./cpff "trace/${trace}.tr" $ssd_parv $ssdout $hdd_parv $hddout "./output/${trace}_${cache}.stat" "./output/${trace}_${cache}.result"
