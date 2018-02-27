@@ -268,8 +268,8 @@ void execute_CPFF_framework() {
   while(1) {
     double ssdServiceTime, hddServiceTime;
     
-    printf(COLOR_BB"\nIndex: %d\tCPFF System Time: %f\n"COLOR_RESET, index++, cpffSystemTime);
-    print_credit();
+    // printf(COLOR_BB"\nIndex: %d\tCPFF System Time: %f\n"COLOR_RESET, index++, cpffSystemTime);
+    // print_credit();
     
     /*執行prize caching，根據系統時間(cpffSystemTime)將host queue內的request送至對應的user queue內*/ 
     prize_caching(cpffSystemTime, user, hostQueue, &sysInfo);
@@ -288,7 +288,7 @@ void execute_CPFF_framework() {
       // print_queue_content(hddDeviceQueue, "hddDeviceQueue");
     }
     
-    printf("===============================================\n");
+    // printf("===============================================\n");
 
     /* we can send ssd request to SSD sim */
     if(cpffSystemTime == ssdReqCompleteTime) {
@@ -304,8 +304,6 @@ void execute_CPFF_framework() {
         statistics_done_func(ssdTmp, "SSD");
 
         remove_req_from_queue_head(ssdDeviceQueue);
-      
-        
       }
     }
 
@@ -326,7 +324,7 @@ void execute_CPFF_framework() {
       }
     }
 
-    print_cache_by_LRU_and_users();
+    // print_cache_by_LRU_and_users();
 
     /*推進系統時間*/
     cpffSystemTime = shift_cpffSystemTime(ssdReqCompleteTime, hddReqCompleteTime);
@@ -338,7 +336,7 @@ void execute_CPFF_framework() {
       printf("User 2 Total request: %lu\n", user[1].totalReq);
       printf("\nTotal user requests: %lu\t(Read: %lu\tWrite: %lu)\n", sysInfo.totalUserReq, sysInfo.userReadReq, sysInfo.userWriteReq);
       printf("Total user 1 requests: %lu\t(Read: %lu\tWrite: %lu)\n", user[0].totalUserReq, user[0].userReadReq, user[0].userWriteReq);
-      printf("Total user requests: %lu\t(Read: %lu\tWrite: %lu)\n", user[1].totalUserReq, user[1].userReadReq, user[1].userWriteReq);
+      printf("Total user 2 requests: %lu\t(Read: %lu\tWrite: %lu)\n", user[1].totalUserReq, user[1].userReadReq, user[1].userWriteReq);
       printf("\nTotal system request: %lu\n", sysInfo.totalSysReq);
       printf("User 1 Total system request: %lu\n", user[0].totalSysReq);
       printf("User 2 Total system request: %lu\n", user[1].totalSysReq);
