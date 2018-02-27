@@ -34,4 +34,4 @@ void initialize(char *par[]);
 void execute_CPFF_framework();
 double shift_cpffSystemTime(double ssdReqCompleteTime, double hddReqCompleteTime);
 void statistics_done_func(REQ *r, char *reqType);
-void record_statistics(systemInfo *sysInfo, userInfo *user);
+void record_statistics(systemInfo *sysInfo, userInfo *user, double systemTime);

@@ -206,16 +206,6 @@ double get_service_time(key_t key, long msgtype, REQ *r) {
 		
 	}
 
-	//Statistics
-	// pcst.totalReq++;
-	// userst[r->userno-1].totalReq++;
-	// sysst.totalReq++;
-	// if (key == KEY_MSQ_DISKSIM_1) {
-	// 		pcst.ssdReq++;
-	// 		userst[r->userno-1].ssdReq++;
-	// 		sysst.ssdReq++;
-	// }
-
 	double service = -1;    //Record service time
 
 	//For SSDsim

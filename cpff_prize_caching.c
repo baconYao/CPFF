@@ -279,7 +279,7 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, system
     /*移除host queue的head指向的request*/
     remove_req_from_queue_head(hostQueue);
 
-    /*Check the type of request*/
+    /*Check the type of user request*/
     if (tmp->reqFlag == DISKSIM_READ) {
       flag = PAGE_FLAG_CLEAN;
       //Statistics
@@ -313,7 +313,8 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, system
   
     /*cache Hit: Page found in cache*/
     if(cache != NULL) {
-      //statistic
+      //statistics
+      sysInfo->hitCount++;
       pcst.hitCount++;
       user[tmp->userno-1].hitCount++;
   
@@ -488,23 +489,22 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, system
               sysInfo->totalSsdReq++;    //for sys read ssd
               sysInfo->totalHddReq++;    //for sys write hdd
               sysInfo->totalSysReq += 2;    //for sys read ssd and sys write hdd
-              sysInfo->sysSsdReadReq ++;    //for sys read ssd
-              sysInfo->sysHddWriteReq ++;    //for sys write hdd
+              sysInfo->sysSsdReadReq++;    //for sys read ssd
+              sysInfo->sysHddWriteReq++;    //for sys write hdd
               sysInfo->dirtyCount++;
               sysInfo->sysSsdReadReqInPeriod++;    //for sys read ssd
               sysInfo->sysHddWriteReqInPeriod++;    //for sys write hdd
               pcst.totalSsdReq++;    //for sys read ssd
               pcst.totalHddReq++;    //for sys write hdd
               pcst.totalSysReq += 2;    //for sys read ssd and sys write hdd
-              pcst.sysSsdReadReq ++;    //for sys read ssd
-              pcst.sysHddWriteReq ++;    //for sys write hdd
+              pcst.sysSsdReadReq++;    //for sys read ssd
+              pcst.sysHddWriteReq++;    //for sys write hdd
               pcst.dirtyCount++;
               user[tmp->userno-1].totalSsdReq++;    //for sys read ssd
               user[tmp->userno-1].totalHddReq++;    //for sys write hdd
               user[tmp->userno-1].totalSysReq += 2;   //for sys read ssd and sys write hdd
               user[tmp->userno-1].sysSsdReadReq++;    //for sys read ssd
               user[tmp->userno-1].sysHddWriteReq++;    //for sys write hdd
-                
               user[tmp->userno-1].sysSsdReadReqInPeriod++;    //for sys read ssd
               user[tmp->userno-1].sysHddWriteReqInPeriod++;    //for sys write hdd
               user[tmp->userno-1].dirtyCount++;

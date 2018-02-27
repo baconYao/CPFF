@@ -75,7 +75,7 @@ void rm_disksim() {
   // fprintf(result, "[YUSIM]SSDsim response time = %lf\n", ctrl_rtn->responseTime);
 
   //Send a control message to finish HDD simulator
-  // sendFinishControl(KEY_MSQ_DISKSIM_2, MSG_TYPE_DISKSIM_2);
+  send_finish_control(KEY_MSQ_DISKSIM_2, MSG_TYPE_DISKSIM_2);
 
   //Receive the last message from HDD simulator
   if(recv_request_by_MSQ(KEY_MSQ_DISKSIM_2, ctrl_rtn, MSG_TYPE_DISKSIM_2_SERVED) == -1) {
@@ -117,6 +117,10 @@ void initialize(char *par[]) {
     print_error(-1, "Trace file open failed ");
   }
 
+  char *dir="./cpff_statistics_dir/System_Record.json";
+  if((systemResultFile = fopen(dir, "w")) == NULL) {
+    print_error(-1, "Can't open the cpff_statistics_dir/System_Record.txt file");
+  }
   
 
   /*建立host queue*/
@@ -321,33 +325,51 @@ void execute_CPFF_framework() {
         remove_req_from_queue_head(hddDeviceQueue);
       }
     }
-    
+
+    print_cache_by_LRU_and_users();
+
     /*推進系統時間*/
     cpffSystemTime = shift_cpffSystemTime(ssdReqCompleteTime, hddReqCompleteTime);
     
     /*每TIME_PERIOD，重新補充credit*/
     if(cpffSystemTime == nextReplenishCreditTime) {
       printf("\nTotal request: %lu\n", sysInfo.totalReq);
-      printf("Total user requests: %lu\t(User read requests: %lu\tUser write requests: %lu)\n", sysInfo.totalUserReq, sysInfo.userReadReq, sysInfo.userWriteReq);
-      printf("Total system request: %lu\n", sysInfo.totalSysReq);
-      printf("Total SSD request: %lu\n", sysInfo.totalSsdReq);
-      printf("Total HDD request: %lu\n", sysInfo.totalHddReq);
-      printf("Total SSD system read request: %lu\n", sysInfo.sysSsdReadReq);
-      printf("Total SSD system write request: %lu\n", sysInfo.sysSsdWriteReq);
-      printf("Total HDD system write request: %lu\n\n", sysInfo.sysHddWriteReq);
-      printf("doneSsdSysReq: %lu\n", sysInfo.doneSsdSysReq);
-      printf("doneSsdSysReqInPeriod: %lu\n", sysInfo.doneSsdSysReqInPeriod);
-      printf("doneHddSysReq: %lu\n", sysInfo.doneHddSysReq);
-      printf("doneHddSysReqInPeriod: %lu\n\n", sysInfo.doneHddSysReqInPeriod);
-      printf("doneSsdUserReq: %lu\n", sysInfo.doneSsdUserReq);
-      printf("doneHddUserReq: %lu\n", sysInfo.doneHddUserReq);
-      printf("doneSsdUserReqInPeriod: %lu\n", sysInfo.doneSsdUserReqInPeriod);
-      printf("doneHddUserReqInPeriod: %lu\n\n", sysInfo.doneHddUserReqInPeriod);
-      printf("userSsdReqResTime: %f\n", sysInfo.userSsdReqResTime);
-      printf("userHddReqResTime: %f\n", sysInfo.userHddReqResTime);
-      printf("userSsdReqResTimeInPeriod: %f\n", sysInfo.userSsdReqResTimeInPeriod);
-      printf("userHddReqResTimeInPeriod: %f\n", sysInfo.userHddReqResTimeInPeriod);
-      record_statistics(&sysInfo, user);
+      printf("User 1 Total request: %lu\n", user[0].totalReq);
+      printf("User 2 Total request: %lu\n", user[1].totalReq);
+      printf("\nTotal user requests: %lu\t(Read: %lu\tWrite: %lu)\n", sysInfo.totalUserReq, sysInfo.userReadReq, sysInfo.userWriteReq);
+      printf("Total user 1 requests: %lu\t(Read: %lu\tWrite: %lu)\n", user[0].totalUserReq, user[0].userReadReq, user[0].userWriteReq);
+      printf("Total user requests: %lu\t(Read: %lu\tWrite: %lu)\n", user[1].totalUserReq, user[1].userReadReq, user[1].userWriteReq);
+      printf("\nTotal system request: %lu\n", sysInfo.totalSysReq);
+      printf("User 1 Total system request: %lu\n", user[0].totalSysReq);
+      printf("User 2 Total system request: %lu\n", user[1].totalSysReq);
+      printf("\nTotal SSD request: %lu\n", sysInfo.totalSsdReq);
+      printf("User 1 Total SSD request: %lu\n", user[0].totalSsdReq);
+      printf("User 2 Total SSD request: %lu\n", user[1].totalSsdReq);
+      printf("\nTotal HDD request: %lu\n", sysInfo.totalHddReq);
+      printf("User 1 Total HDD request: %lu\n", user[0].totalHddReq);
+      printf("User 2 Total HDD request: %lu\n", user[1].totalHddReq);
+      printf("\nTotal SSD system read request: %lu\n", sysInfo.sysSsdReadReq);
+      printf("1 Total SSD system read request: %lu\n", user[0].sysSsdReadReq);
+      printf("2 Total SSD system read request: %lu\n", user[1].sysSsdReadReq);
+      printf("\nTotal SSD system write request: %lu\n", sysInfo.sysSsdWriteReq);
+      printf("1 Total SSD system write request: %lu\n", user[0].sysSsdWriteReq);
+      printf("2 Total SSD system write request: %lu\n", user[1].sysSsdWriteReq);
+      printf("\nTotal HDD system write request: %lu\n", sysInfo.sysHddWriteReq);
+      printf("1 Total HDD system write request: %lu\n", user[0].sysHddWriteReq);
+      printf("2 Total HDD system write request: %lu\n", user[1].sysHddWriteReq);
+      // printf("doneSsdSysReq: %lu\n", sysInfo.doneSsdSysReq);
+      // printf("doneSsdSysReqInPeriod: %lu\n", sysInfo.doneSsdSysReqInPeriod);
+      // printf("doneHddSysReq: %lu\n", sysInfo.doneHddSysReq);
+      // printf("doneHddSysReqInPeriod: %lu\n\n", sysInfo.doneHddSysReqInPeriod);
+      // printf("doneSsdUserReq: %lu\n", sysInfo.doneSsdUserReq);
+      // printf("doneHddUserReq: %lu\n", sysInfo.doneHddUserReq);
+      // printf("doneSsdUserReqInPeriod: %lu\n", sysInfo.doneSsdUserReqInPeriod);
+      // printf("doneHddUserReqInPeriod: %lu\n\n", sysInfo.doneHddUserReqInPeriod);
+      // printf("userSsdReqResTime: %f\n", sysInfo.userSsdReqResTime);
+      // printf("userHddReqResTime: %f\n", sysInfo.userHddReqResTime);
+      // printf("userSsdReqResTimeInPeriod: %f\n", sysInfo.userSsdReqResTimeInPeriod);
+      // printf("userHddReqResTimeInPeriod: %f\n", sysInfo.userHddReqResTimeInPeriod);
+      record_statistics(&sysInfo, user, cpffSystemTime);
       print_credit();
       if(credit_replenish(user, totalWeight) != 0) {
         print_error(-1, "Can't replenish user credit!");
@@ -358,6 +380,10 @@ void execute_CPFF_framework() {
       c = getchar();
     }
 
+    /*All requests have been done*/
+    if(is_empty_queue(hostQueue) && is_empty_queue(hddDeviceQueue) && is_empty_queue(ssdDeviceQueue) && are_all_user_hdd_queue_empty(user) && are_all_user_ssd_queue_empty(user)) {
+      return;
+    }
     // c = getchar();
     
   }
@@ -437,21 +463,16 @@ void statistics_done_func(REQ *r, char *reqType) {
   }
 }
 
-void record_statistics(systemInfo *sysInfo, userInfo *user) {
+/*[寫檔紀錄]*/
+void record_statistics(systemInfo *sysInfo, userInfo *user, double systemTime) {
   if(sysInfo != NULL) {
-    char *dir="./cpff_statistics_dir/System_Record.json";
-    if((systemResultFile = fopen(dir, "a+")) == NULL) {
-      print_error(-1, "Can't open the cpff_statistics_dir/System_Record.txt file");
-    }
-    fprintf(systemResultFile, "[{\n");
-
+    
+    fprintf(systemResultFile, "\n-----------------------------\n");
     fprintf(systemResultFile, "Total request: %lu\n", sysInfo->totalReq);
     fprintf(systemResultFile, "Total user requests: %lu\t(Read: %lu\tWrite: %lu)\n", sysInfo->totalUserReq, sysInfo->userReadReq, sysInfo->userWriteReq);
     fprintf(systemResultFile, "Total system requests: %lu\t(Read: %lu\tWrite: %lu)\n", sysInfo->totalSysReq);
     fprintf(systemResultFile, "-----------------------------\n");
-    fprintf(systemResultFile, "}]\n");
-
-    fclose(systemResultFile);
+    
     return;
   }
 }
@@ -480,6 +501,8 @@ int main(int argc, char *argv[]) {
 
   execute_CPFF_framework();
 
+  /*Remove Disksim(SSD and HDD simulators)*/
+  rm_disksim();
   
   // Waiting for SSDsim and HDDsim process
   wait(NULL);
@@ -488,5 +511,7 @@ int main(int argc, char *argv[]) {
   //printf("Main Process waits for: %d\n", wait(NULL));
   //printf("Main Process waits for: %d\n", wait(NULL));
   
+  fclose(systemResultFile);
+
   return 0;
 }
