@@ -50,7 +50,7 @@
 	#define SSD_N_ELEMENTS 1 //SSD Channels //No multi channel
 
   #define TIME_PERIOD 1000.0 //ms  //VSSD uses 1000.0
-  #define STAT_FOR_TIME_PERIODS 10 // Once writeStatFile() for ? TIME_PERIODS
+  #define STAT_FOR_TIME_PERIODS 10 // 每隔幾個TIME_PERIOD記錄一次
 
   /*credit*/
   #define INIT_CREDIT (TIME_PERIOD*SSD_N_ELEMENTS)		//The initial credit

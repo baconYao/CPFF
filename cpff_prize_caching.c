@@ -259,12 +259,11 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, system
 
   int flag = 0;           //The flag of page
 
-
   while(1) {
 
-    char c = getchar();
     /*host queue內沒有request*/
     if(is_empty_queue(hostQueue)) {
+      printf("Host Q is empty\n");
       break;
     }
 
@@ -283,11 +282,12 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, system
 
     /*Check the type of user request*/
     if (tmp->reqFlag == DISKSIM_READ) {
-      printf(COLOR_GB"@@@@@ User %d READ req in\n"COLOR_RESET, tmp->userno);
+      // printf(COLOR_GB"@@@@@ User %d READ req in\n"COLOR_RESET, tmp->userno);
       
       flag = PAGE_FLAG_CLEAN;
       //Statistics
       sysInfo->totalReq++;
+      sysInfo->userReadReqInSecond++;
       sysInfo->userReadReqInPeriod++;
       pcst.userReadReq++;
       pcst.totalReq++;
@@ -295,13 +295,15 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, system
       user[tmp->userno-1].totalReq++;
       user[tmp->userno-1].totalUserReq++;
       user[tmp->userno-1].userReadReq++;
+      user[tmp->userno-1].userReadReqInSecond++;
       user[tmp->userno-1].userReadReqInPeriod++;
     }
     else {
-      printf(COLOR_GB"@@@@@ User %d WRITE req in\n"COLOR_RESET, tmp->userno);
+      // printf(COLOR_GB"@@@@@ User %d WRITE req in\n"COLOR_RESET, tmp->userno);
       flag = PAGE_FLAG_DIRTY;
       //Statistics
       sysInfo->totalReq++;
+      sysInfo->userWriteReqInSecond++;
       sysInfo->userWriteReqInPeriod++;
       pcst.userWriteReq++;
       pcst.totalReq++;
@@ -309,6 +311,7 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, system
       user[tmp->userno-1].totalReq++;
       user[tmp->userno-1].totalUserReq++;
       user[tmp->userno-1].userWriteReq++; 
+      user[tmp->userno-1].userWriteReqInSecond++;
       user[tmp->userno-1].userWriteReqInPeriod++;
     }
   
@@ -320,8 +323,12 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, system
     if(cache != NULL) {
       //statistics
       sysInfo->hitCount++;
+      sysInfo->hitCountInSecond++;
+      sysInfo->hitCountInPeriod++;
       pcst.hitCount++;
       user[tmp->userno-1].hitCount++;
+      user[tmp->userno-1].hitCountInSecond++;
+      user[tmp->userno-1].hitCountInPeriod++;
   
       /*Add new one or update metadata(prize)*/ 
       METABLOCK *meta;
@@ -352,14 +359,18 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, system
         print_error(-1, "[cpff_prize_caching.c (2)] Can't move request to user SSD queue");
       }
 
-      printf(COLOR_GB"@@@@@ User %d Hit\n"COLOR_RESET, tmp->userno);
+      // printf(COLOR_GB"@@@@@ User %d Hit\n"COLOR_RESET, tmp->userno);
       
 
     } else {   /*cache Miss: Page not found in cache*/  
       //Statistics
       sysInfo->missCount++;
+      sysInfo->missCountInSecond++;
+      sysInfo->missCountInPeriod++;
       pcst.missCount++;
       user[tmp->userno-1].missCount++;
+      user[tmp->userno-1].missCountInSecond++;
+      user[tmp->userno-1].missCountInPeriod++;
 
       /*New or update metadata(prize)*/ 
       METABLOCK *meta;
@@ -383,8 +394,8 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, system
           //Read Cache Miss: 但cache is not full，所以會產生SSD Write system request
           if(tmp->reqFlag == DISKSIM_READ) {
             
-            printf(COLOR_GB"@@@@@ User %d READ Miss -->SSD isn't full\n"COLOR_RESET, tmp->userno);
-            printf(COLOR_GB"@@@@@ Generate a SSD Write system request\n"COLOR_RESET);
+            // printf(COLOR_GB"@@@@@ User %d READ Miss -->SSD isn't full\n"COLOR_RESET, tmp->userno);
+            // printf(COLOR_GB"@@@@@ Generate a SSD Write system request\n"COLOR_RESET);
 
             /*將hdd read request 送至 user hdd queue*/ 
             if(!insert_req_to_user_que_tail(user, "HDD", tmp)) {
@@ -413,6 +424,7 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, system
             sysInfo->totalSsdReq++;       //for system ssd write req
             sysInfo->totalSysReq++;       //for system ssd write req
             sysInfo->sysSsdWriteReq++;    //for system ssd write req
+            sysInfo->sysSsdWriteReqInSecond++;   //for system ssd write req
             sysInfo->sysSsdWriteReqInPeriod++;   //for system ssd write req
             pcst.totalReq++;      //for system ssd write req
             pcst.totalHddReq++;       //for user hdd read req
@@ -424,6 +436,7 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, system
             user[tmp->userno-1].totalSsdReq++;    //for system ssd write req
             user[tmp->userno-1].totalSysReq++;   //for system ssd write req
             user[tmp->userno-1].sysSsdWriteReq++;   //for system ssd write req
+            user[tmp->userno-1].sysSsdWriteReqInSecond++;   //for system ssd write req
             user[tmp->userno-1].sysSsdWriteReqInPeriod++;   //for system ssd write req
             
 
@@ -440,7 +453,7 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, system
             pcst.totalSsdReq++;
             user[tmp->userno-1].totalSsdReq++;
             
-            printf(COLOR_GB"@@@@@ User %d WRITE Miss -->SSD isn't full\n"COLOR_RESET, tmp->userno);
+            // printf(COLOR_GB"@@@@@ User %d WRITE Miss -->SSD isn't full\n"COLOR_RESET, tmp->userno);
 
           }
         } else { // Cache is full, 所以要比較SSD中的minimal prize value，決定是否代替(eviction)
@@ -466,7 +479,7 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, system
             if (evict == NULL) {
               print_error(-1, "[cpff_prize_caching.c (7)]Cache eviction error: Victim not found!:");
             }
-            printf(COLOR_GB"@@@@@ User %d Miss -->SSD is full --> evict\n"COLOR_RESET, tmp->userno);
+            // printf(COLOR_GB"@@@@@ User %d Miss -->SSD is full --> evict\n"COLOR_RESET, tmp->userno);
             
             //Modify metadata
             if (evict->pcMeta == NULL) {
@@ -477,7 +490,7 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, system
             //Generate IO requests
             //If victim page is dirty, System Read SSDsim & System Write HDDsim
             if (evict->dirtyFlag == PAGE_FLAG_DIRTY) {
-              printf(COLOR_GB"@@@@@ Dirty --> System Read SSDsim & System Write HDDsim\n"COLOR_RESET);
+              // printf(COLOR_GB"@@@@@ Dirty --> System Read SSDsim & System Write HDDsim\n"COLOR_RESET);
               
               REQ *r1, *r2;
               r1 = calloc(1, sizeof(REQ));      //SSD read system request
@@ -509,7 +522,11 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, system
               sysInfo->sysSsdReadReq++;    //for sys read ssd
               sysInfo->sysHddWriteReq++;    //for sys write hdd
               sysInfo->dirtyCount++;
+              sysInfo->dirtyCountInSecond++;
+              sysInfo->dirtyCountInPeriod++;
+              sysInfo->sysSsdReadReqInSecond++;    //for sys read ssd
               sysInfo->sysSsdReadReqInPeriod++;    //for sys read ssd
+              sysInfo->sysHddWriteReqInSecond++;    //for sys write hdd
               sysInfo->sysHddWriteReqInPeriod++;    //for sys write hdd
               pcst.totalReq += 2;    //for sys read ssd and sys write hdd
               pcst.totalSsdReq++;    //for sys read ssd
@@ -524,9 +541,13 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, system
               user[tmp->userno-1].totalSysReq += 2;   //for sys read ssd and sys write hdd
               user[tmp->userno-1].sysSsdReadReq++;    //for sys read ssd
               user[tmp->userno-1].sysHddWriteReq++;    //for sys write hdd
+              user[tmp->userno-1].sysSsdReadReqInSecond++;    //for sys read ssd
               user[tmp->userno-1].sysSsdReadReqInPeriod++;    //for sys read ssd
+              user[tmp->userno-1].sysHddWriteReqInSecond++;    //for sys write hdd
               user[tmp->userno-1].sysHddWriteReqInPeriod++;    //for sys write hdd
               user[tmp->userno-1].dirtyCount++;
+              user[tmp->userno-1].dirtyCountInSecond++;
+              user[tmp->userno-1].dirtyCountInPeriod++;
 
               //Release request variable
               free(r1);
@@ -534,8 +555,12 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, system
             }
             //Statistics
             sysInfo->evictCount++;
+            sysInfo->evictCountInSecond++;
+            sysInfo->evictCountInPeriod++;
             pcst.evictCount++;
             user[tmp->userno-1].evictCount++;
+            user[tmp->userno-1].evictCountInSecond++;
+            user[tmp->userno-1].evictCountInPeriod++;
             
 
             //Caching
@@ -567,14 +592,15 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, system
                 if(!insert_req_to_user_que_tail(user, "SSD", r)) {
                   print_error(-1, "[cpff_prize_caching.c (12)] Can't move request to user SSD queue");
                 }
-                printf(COLOR_GB"@@@@@ Then User %d READ Miss -->SSD isn't full\n"COLOR_RESET, tmp->userno);
-                printf(COLOR_GB"@@@@@ Generate a SSD Write system request\n"COLOR_RESET);
+                // printf(COLOR_GB"@@@@@ Then User %d READ Miss -->SSD isn't full\n"COLOR_RESET, tmp->userno);
+                // printf(COLOR_GB"@@@@@ Generate a SSD Write system request\n"COLOR_RESET);
                 //Statistics
                 sysInfo->totalReq++;      //for system ssd write req
                 sysInfo->totalHddReq++;       //for user hdd read req
                 sysInfo->totalSsdReq++;       //for system ssd write req
                 sysInfo->totalSysReq++;       //for system ssd write req
                 sysInfo->sysSsdWriteReq++;    //for system ssd write req
+                sysInfo->sysSsdWriteReqInSecond++;   //for system ssd write req;
                 sysInfo->sysSsdWriteReqInPeriod++;   //for system ssd write req;
                 pcst.totalReq++;      //for system ssd write req
                 pcst.totalHddReq++;       //for user hdd read req
@@ -586,6 +612,7 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, system
                 user[tmp->userno-1].totalSsdReq++;    //for system ssd write req
                 user[tmp->userno-1].totalSysReq++;   //for system ssd write req
                 user[tmp->userno-1].sysSsdWriteReq++;   //for system ssd write req
+                user[tmp->userno-1].sysSsdWriteReqInSecond++;   //for system ssd write req;
                 user[tmp->userno-1].sysSsdWriteReqInPeriod++;   //for system ssd write req;
 
                 //Release request variable
@@ -597,7 +624,7 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, system
                 if(!insert_req_to_user_que_tail(user, "SSD", tmp)) {
                   print_error(-1, "[cpff_prize_caching.c (13)] Can't move request to user SSD queue");
                 }
-                 printf(COLOR_GB"@@@@@Then User %d WRITE Miss -->SSD isn't full\n"COLOR_RESET, tmp->userno);
+                //  printf(COLOR_GB"@@@@@Then User %d WRITE Miss -->SSD isn't full\n"COLOR_RESET, tmp->userno);
 
                 //Statistics
                 sysInfo->totalSsdReq++;
@@ -614,14 +641,14 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, system
               if(!insert_req_to_user_que_tail(user, "HDD", tmp)) {
                 print_error(-1, "[cpff_prize_caching.c (13)] Can't move request to user SSD queue");
               }
-                printf(COLOR_GB"@@@@@ User %d READ Miss --> pc value < minPrize\n"COLOR_RESET, tmp->userno);
+                // printf(COLOR_GB"@@@@@ User %d READ Miss --> pc value < minPrize\n"COLOR_RESET, tmp->userno);
               
             } else {
               /*將hdd write request 送至 user ssd queue*/ 
               if(!insert_req_to_user_que_tail(user, "HDD", tmp)) {
                 print_error(-1, "[cpff_prize_caching.c (13)] Can't move request to user SSD queue");
               }
-                printf(COLOR_GB"@@@@@ User %d WRITE Miss --> pc value < minPrize\n"COLOR_RESET, tmp->userno);
+                // printf(COLOR_GB"@@@@@ User %d WRITE Miss --> pc value < minPrize\n"COLOR_RESET, tmp->userno);
               
             }
             sysInfo->totalHddReq++;

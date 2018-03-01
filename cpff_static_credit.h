@@ -17,7 +17,7 @@
 	/*CREDIT INITIALIZATION*/
 	int init_credit(userInfo *user, int totalWeight);
 	/*CREDIT PRE CHARGING*/
-	void credit_pre_charge(unsigned userno, REQ *r, char *creditType);
+	void credit_pre_charge(userInfo *user, unsigned userno, REQ *r, char *creditType);
 	/*Credit 補償*/ 
 	void credit_compensate(unsigned userno, double serviceTime, REQ *r, char *creditType);
 	/*Credit 重新補充*/ 

@@ -48,4 +48,4 @@ echo ""
 
 
 echo "Run cpff......"
-./cpff "trace/${trace}.tr" $ssd_parv $ssdout $hdd_parv $hddout "./output/${trace}_${cache}.stat" "./output/${trace}_${cache}.result"
+./cpff "trace/${trace}.tr" $ssd_parv $ssdout $hdd_parv $hddout

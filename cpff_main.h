@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdlib.h>
+#include <string.h>
 #include <stdbool.h>
 #include <sys/types.h>
 #include <unistd.h>   //for fork()
@@ -34,4 +36,8 @@ void initialize(char *par[]);
 void execute_CPFF_framework();
 double shift_cpffSystemTime(double ssdReqCompleteTime, double hddReqCompleteTime);
 void statistics_done_func(REQ *r, char *reqType);
-void record_statistics(systemInfo *sysInfo, userInfo *user, double systemTime);
+void period_record_statistics(systemInfo *sysInfo, userInfo *user, double systemTime);
+void period_csv_statistics(systemInfo *sysInfo, userInfo *user, double systemTime);
+void second_record_statistics(systemInfo *sysInfo, userInfo *user, double systemTime);
+void second_csv_statistics(systemInfo *sysInfo, userInfo *user, double systemTime);
+void reset_second_value(systemInfo *sysInfo, userInfo *user);

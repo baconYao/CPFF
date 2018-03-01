@@ -168,11 +168,11 @@ int send_finish_control(key_t key, long msgtype) {
 void init_MSQ() {
   //Create message queue for SSD simulator
   if(create_message_queue(KEY_MSQ_DISKSIM_1, IPC_CREAT) == -1) {
-    print_error(-1, " MSQ create error in createMessageQueue():");
+    print_error(-1, " MSQ create error in create_SSD_message_queue():");
   }
   //Create message queue for HDD simulator
   if(create_message_queue(KEY_MSQ_DISKSIM_2, IPC_CREAT) == -1) {
-    print_error(-1, " MSQ create error in createMessageQueue():");
+    print_error(-1, " MSQ create error in creatcreate_HDD_message_queueeMessageQueue():");
   }
 }
 

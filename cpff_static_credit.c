@@ -47,12 +47,13 @@ int init_credit(userInfo *user, int totalWeight) {
 
 /**
  * [預先扣除credit]
+ * @param {userInfo} user [User pointer]
  * @param {unsigned} userno [User number(0-n)]
  * @param {REQ *} r [the reuqest in the user queue]
  * @param {char *} creditType [判斷是哪種type的credit (SSDCredit or HDDCredit)]
  * @return {double} userCredit [Modified user credit]
  */
-void credit_pre_charge(unsigned userno, REQ *r, char *creditType) {
+void credit_pre_charge(userInfo *user, unsigned userno, REQ *r, char *creditType) {
   if(!strcmp("SSDCredit", creditType)) {
     switch (r->reqFlag) {
       case DISKSIM_READ:
@@ -67,14 +68,28 @@ void credit_pre_charge(unsigned userno, REQ *r, char *creditType) {
         break;
     }
   } else {
+    /*HDD request利用每個user的HDD request average response time當成pre-charge value*/
     switch (r->reqFlag) {
       case DISKSIM_READ:
-        r->preChargeValue = HDD_READ_PRE_CHAREG_VALUE;
-        userHDDCredit[userno] -= HDD_READ_PRE_CHAREG_VALUE;
-        break;
+        if(user[userno].doneHddUserReq != 0 ) {     //此user已經有HDD request完成
+          r->preChargeValue = user[userno].userHddReqResTime / (double)user[userno].doneHddUserReq;
+          userHDDCredit[userno] -= r->preChargeValue;
+          break;
+        } else {        //此user沒有HDD request完成，所以用自訂的pre-charge value
+          r->preChargeValue = HDD_READ_PRE_CHAREG_VALUE;
+          userHDDCredit[userno] -= HDD_READ_PRE_CHAREG_VALUE;
+          break;
+        }
       case DISKSIM_WRITE:
-        r->preChargeValue = HDD_WRITE_PRE_CHAREG_VALUE;
-        userHDDCredit[userno] -= HDD_WRITE_PRE_CHAREG_VALUE;
+        if(user[userno].doneHddUserReq != 0 ) {     //此user已經有HDD request完成
+          r->preChargeValue = user[userno].userHddReqResTime / (double)user[userno].doneHddUserReq;
+          userHDDCredit[userno] -= r->preChargeValue;
+          break;
+        } else {        //此user沒有HDD request完成，所以用自訂的pre-charge value
+          r->preChargeValue = HDD_WRITE_PRE_CHAREG_VALUE;
+          userHDDCredit[userno] -= HDD_WRITE_PRE_CHAREG_VALUE;
+          break;
+        }
         break;
       default:
         break;
@@ -95,10 +110,10 @@ void credit_compensate(unsigned userno, double serviceTime, REQ *r, char *credit
   if(!strcmp("SSDCredit", creditType)) {
     switch (r->reqFlag) {
       case DISKSIM_READ:
-        userSSDCredit[userno] = userSSDCredit[userno] + (SSD_READ_PRE_CHAREG_VALUE - serviceTime);
+        userSSDCredit[userno] = userSSDCredit[userno] + (r->preChargeValue - serviceTime);
         break;
       case DISKSIM_WRITE:
-        userSSDCredit[userno] = userSSDCredit[userno] + (SSD_WRITE_PRE_CHAREG_VALUE - serviceTime);
+        userSSDCredit[userno] = userSSDCredit[userno] + (r->preChargeValue - serviceTime);
         break;
       default:
         break;
@@ -106,10 +121,10 @@ void credit_compensate(unsigned userno, double serviceTime, REQ *r, char *credit
   } else {
     switch (r->reqFlag) {
       case DISKSIM_READ:
-        userHDDCredit[userno] = userHDDCredit[userno] + (HDD_READ_PRE_CHAREG_VALUE - serviceTime);
+        userHDDCredit[userno] = userHDDCredit[userno] + (r->preChargeValue - serviceTime);
         break;
       case DISKSIM_WRITE:
-        userHDDCredit[userno] = userHDDCredit[userno] + (HDD_WRITE_PRE_CHAREG_VALUE - serviceTime);
+        userHDDCredit[userno] = userHDDCredit[userno] + (r->preChargeValue - serviceTime);
         break;
       default:
         break;
@@ -134,7 +149,7 @@ void ssd_credit_scheduler(userInfo *user, QUE *ssdDeviceQueue) {
       tmp = calloc(1, sizeof(REQ));
       copy_req(&(user[i].ssdQueue->head->r), tmp);
       /*pre charge ssd credit*/ 
-      credit_pre_charge(i, tmp, "SSDCredit");
+      credit_pre_charge(user, i, tmp, "SSDCredit");
 
       insert_req_to_device_que_tail(ssdDeviceQueue, tmp);
       /*移除user ssd queue的head指向的request*/
@@ -162,7 +177,7 @@ void hdd_credit_scheduler(userInfo *user, QUE *hddDeviceQueue) {
       tmp = calloc(1, sizeof(REQ));
       copy_req(&(user[i].hddQueue->head->r), tmp);
       /*pre charge ssd credit*/ 
-      credit_pre_charge(i, tmp, "HDDCredit");
+      credit_pre_charge(user, i, tmp, "HDDCredit");
 
       insert_req_to_device_que_tail(hddDeviceQueue, tmp);
       /*移除user ssd queue的head指向的request*/

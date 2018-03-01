@@ -44,41 +44,62 @@
   /*定義user的structure格式*/
   typedef struct userInfo {
     unsigned int globalWeight;    // 全域的weight
-    unsigned long totalReq;				//Request數量 (include user and system request)
+    unsigned long totalReq;		//Request數量 (include user and system request)
     unsigned long totalSsdReq;		//SSD Request數量 (include user and system ssd request)
     unsigned long totalHddReq;		//HDD Request數量 (include user and system hdd request)
     unsigned long totalUserReq;			//User Request數量
     unsigned long userReadReq;				//User Read Request數量
+    unsigned long userReadReqInSecond;		//User Read Request in one second數量 
+    unsigned long userReadReqInPeriod;		//User Read Request in one period數量 
     unsigned long userWriteReq;				//User Write Request數量
-    unsigned long userReadReqInPeriod;		//User Read Request in one period數量 (Value reset to 0 when credit replenish)
-    unsigned long userWriteReqInPeriod;		//User Write Request in one period數量 (Value reset to 0 when credit replenish)
-    unsigned long sysSsdReadReqInPeriod;		//SSD System Read Request in one period數量 (Value reset to 0 when credit replenish)
-    unsigned long sysSsdWriteReqInPeriod;		//SSD System Write Request in one period數量 (Value reset to 0 when credit replenish)
-    unsigned long sysHddWriteReqInPeriod;		//SSD System Write Request in one period數量 (Value reset to 0 when credit replenish)
-    unsigned long totalSysReq;			  //System Request數量
+    unsigned long userWriteReqInSecond;		//User Write Request in one Second數量 
+    unsigned long userWriteReqInPeriod;		//User Write Request in one period數量 
+    unsigned long totalSysReq;	  //System Request數量
     unsigned long sysSsdReadReq;			//System SSD Read Request數量
+    unsigned long sysSsdReadReqInSecond;		//SSD System Read Request in one Second數量 
+    unsigned long sysSsdReadReqInPeriod;		//SSD System Read Request in one period數量 
     unsigned long sysSsdWriteReq;			//System SSD Write Request數量
+    unsigned long sysSsdWriteReqInSecond;		//SSD System Write Request in one Second數量 
+    unsigned long sysSsdWriteReqInPeriod;		//SSD System Write Request in one period數量 
     unsigned long sysHddWriteReq;			//System HDD Write Request數量
+    unsigned long sysHddWriteReqInSecond;		//SSD System Write Request in one Second數量 
+    unsigned long sysHddWriteReqInPeriod;		//SSD System Write Request in one period數量 
     unsigned long evictCount;			//Eviction次數
+    unsigned long evictCountInSecond;			//每秒 Eviction次數
+    unsigned long evictCountInPeriod;			//Period Eviction次數
     unsigned long dirtyCount;			//Dirty Page Eviction次數
+    unsigned long dirtyCountInSecond;			//每秒 Dirty Page Eviction次數
+    unsigned long dirtyCountInPeriod;			//Period Dirty Page Eviction次數
     unsigned long hitCount;				//Hit次數
+    unsigned long hitCountInSecond;				//每秒 Hit次數
+    unsigned long hitCountInPeriod;				//Period Hit次數
     unsigned long missCount;			//Miss次數
+    unsigned long missCountInSecond;			//每秒 Miss次數
+    unsigned long missCountInPeriod;			//Period Miss次數
     unsigned long doneSsdSysReq;			//紀錄已經送進SSD simulator做完的system request
+    unsigned long doneSsdSysReqInSecond;			//紀錄每秒已經送進SSD simulator做完的system request 
+    unsigned long doneSsdSysReqInPeriod;			//紀錄每period已經送進SSD simulator做完的system request 
     unsigned long doneHddSysReq;			//紀錄已經送進HDD simulator做完的system request
-    unsigned long doneSsdSysReqInPeriod;			//紀錄已經送進SSD simulator做完的system request (Value reset to 0 when credit replenish)
-    unsigned long doneHddSysReqInPeriod;			//紀錄已經送進HDD simulator做完的system request (Value reset to 0 when credit replenish)
+    unsigned long doneHddSysReqInSecond;			//紀錄每秒已經送進HDD simulator做完的system request  
+    unsigned long doneHddSysReqInPeriod;			//紀錄每period已經送進HDD simulator做完的system request 
     unsigned long doneSsdUserReq;			//紀錄已經送進SSD simulator做完的User request
+    unsigned long doneSsdUserReqInSecond;			//紀錄每秒已經送進SSD simulator做完的User request 
+    unsigned long doneSsdUserReqInPeriod;			//紀錄每period已經送進SSD simulator做完的User request 
     unsigned long doneHddUserReq;			//紀錄已經送進HDD simulator做完的User request
-    unsigned long doneSsdUserReqInPeriod;			//紀錄已經送進SSD simulator做完的User request (Value reset to 0 when credit replenish)
-    unsigned long doneHddUserReqInPeriod;			//紀錄已經送進HDD simulator做完的User request (Value reset to 0 when credit replenish)
+    unsigned long doneHddUserReqInSecond;			//紀錄每秒已經送進HDD simulator做完的User request 
+    unsigned long doneHddUserReqInPeriod;			//紀錄每period已經送進HDD simulator做完的User request 
     double userSsdReqResTime;					    	//All user ssd requests'  response time for system
+    double userSsdReqResTimeInSecond;				//All user ssd requests' response time for system in one second
+    double userSsdReqResTimeInPeriod;				//All user ssd requests' response time for system in one period
     double userHddReqResTime;					    	//All user hdd requests'  response time for system
-    double userSsdReqResTimeInPeriod;				//All user ssd requests' response time for system in one period, Value reset to 0 when credit replenish
-    double userHddReqResTimeInPeriod;				//All user hdd requests' response time for system in one period, Value reset to 0 when credit replenish
+    double userHddReqResTimeInSecond;				//All user hdd requests' response time for system in one second
+    double userHddReqResTimeInPeriod;				//All user hdd requests' response time for system in one period
     double sysSsdReqResTime;					    	//All system ssd requests' response time for system
+    double sysSsdReqResTimeInSecond;				//All system ssd requests' response time for system in one second
+    double sysSsdReqResTimeInPeriod;				//All system ssd requests' response time for system in one period
     double sysHddReqResTime;					    	//All system hdd requests' response time for system
-    double sysSsdReqResTimeInPeriod;				//All system ssd requests' response time for system in one period, Value reset to 0 when credit replenish
-    double sysHddReqResTimeInPeriod;				//All system hdd requests' response time for system in one period, Value reset to 0 when credit replenish
+    double sysHddReqResTimeInSecond;				//All system hdd requests' response time for system in one second
+    double sysHddReqResTimeInPeriod;				//All system hdd requests' response time for system in one period
     int cachingSpace;
     QUE *ssdQueue;
     QUE *hddQueue;
@@ -91,36 +112,57 @@
     unsigned long totalHddReq;		//HDD Request數量 (include user and system hdd request)
     unsigned long totalUserReq;			//User Request數量
     unsigned long userReadReq;				//User Read Request數量
+    unsigned long userReadReqInSecond;		//User Read Request in one second數量 
+    unsigned long userReadReqInPeriod;		//User Read Request in one period數量 
     unsigned long userWriteReq;				//User Write Request數量
-    unsigned long userReadReqInPeriod;		//User Read Request in one period數量 (Value reset to 0 when credit replenish)
-    unsigned long userWriteReqInPeriod;		//User Write Request in one period數量 (Value reset to 0 when credit replenish)
-    unsigned long sysSsdReadReqInPeriod;		//SSD System Read Request in one period數量 (Value reset to 0 when credit replenish)
-    unsigned long sysSsdWriteReqInPeriod;		//SSD System Write Request in one period數量 (Value reset to 0 when credit replenish)
-    unsigned long sysHddWriteReqInPeriod;		//SSD System Write Request in one period數量 (Value reset to 0 when credit replenish)
+    unsigned long userWriteReqInSecond;		//User Write Request in one Second數量 
+    unsigned long userWriteReqInPeriod;		//User Write Request in one period數量 
     unsigned long totalSysReq;	  //System Request數量
     unsigned long sysSsdReadReq;			//System SSD Read Request數量
+    unsigned long sysSsdReadReqInSecond;		//SSD System Read Request in one Second數量 
+    unsigned long sysSsdReadReqInPeriod;		//SSD System Read Request in one period數量 
     unsigned long sysSsdWriteReq;			//System SSD Write Request數量
+    unsigned long sysSsdWriteReqInSecond;		//SSD System Write Request in one Second數量 
+    unsigned long sysSsdWriteReqInPeriod;		//SSD System Write Request in one period數量 
     unsigned long sysHddWriteReq;			//System HDD Write Request數量
-    unsigned long evictCount;	//Eviction次數
-    unsigned long dirtyCount;	//Dirty Block Eviction次數
-    unsigned long hitCount;		//Hit次數
-    unsigned long missCount;	//Miss次數
+    unsigned long sysHddWriteReqInSecond;		//SSD System Write Request in one Second數量 
+    unsigned long sysHddWriteReqInPeriod;		//SSD System Write Request in one period數量 
+    unsigned long evictCount;			//Eviction次數
+    unsigned long evictCountInSecond;			//每秒 Eviction次數
+    unsigned long evictCountInPeriod;			//Period Eviction次數
+    unsigned long dirtyCount;			//Dirty Page Eviction次數
+    unsigned long dirtyCountInSecond;			//每秒 Dirty Page Eviction次數
+    unsigned long dirtyCountInPeriod;			//Period Dirty Page Eviction次數
+    unsigned long hitCount;				//Hit次數
+    unsigned long hitCountInSecond;				//每秒 Hit次數
+    unsigned long hitCountInPeriod;				//Period Hit次數
+    unsigned long missCount;			//Miss次數
+    unsigned long missCountInSecond;			//每秒 Miss次數
+    unsigned long missCountInPeriod;			//Period Miss次數
     unsigned long doneSsdSysReq;			//紀錄已經送進SSD simulator做完的system request
+    unsigned long doneSsdSysReqInSecond;			//紀錄每秒已經送進SSD simulator做完的system request 
+    unsigned long doneSsdSysReqInPeriod;			//紀錄每period已經送進SSD simulator做完的system request 
     unsigned long doneHddSysReq;			//紀錄已經送進HDD simulator做完的system request
-    unsigned long doneSsdSysReqInPeriod;			//紀錄已經送進SSD simulator做完的system request (Value reset to 0 when credit replenish)
-    unsigned long doneHddSysReqInPeriod;			//紀錄已經送進HDD simulator做完的system request (Value reset to 0 when credit replenish)
+    unsigned long doneHddSysReqInSecond;			//紀錄每秒已經送進HDD simulator做完的system request  
+    unsigned long doneHddSysReqInPeriod;			//紀錄每period已經送進HDD simulator做完的system request 
     unsigned long doneSsdUserReq;			//紀錄已經送進SSD simulator做完的User request
+    unsigned long doneSsdUserReqInSecond;			//紀錄每秒已經送進SSD simulator做完的User request 
+    unsigned long doneSsdUserReqInPeriod;			//紀錄每period已經送進SSD simulator做完的User request 
     unsigned long doneHddUserReq;			//紀錄已經送進HDD simulator做完的User request
-    unsigned long doneSsdUserReqInPeriod;			//紀錄已經送進SSD simulator做完的User request (Value reset to 0 when credit replenish)
-    unsigned long doneHddUserReqInPeriod;			//紀錄已經送進HDD simulator做完的User request (Value reset to 0 when credit replenish)
+    unsigned long doneHddUserReqInSecond;			//紀錄每秒已經送進HDD simulator做完的User request 
+    unsigned long doneHddUserReqInPeriod;			//紀錄每period已經送進HDD simulator做完的User request 
     double userSsdReqResTime;					    	//All user ssd requests'  response time for system
+    double userSsdReqResTimeInSecond;				//All user ssd requests' response time for system in one second
+    double userSsdReqResTimeInPeriod;				//All user ssd requests' response time for system in one period
     double userHddReqResTime;					    	//All user hdd requests'  response time for system
-    double userSsdReqResTimeInPeriod;				//All user ssd requests' response time for system in one period, Value reset to 0 when credit replenish
-    double userHddReqResTimeInPeriod;				//All user hdd requests' response time for system in one period, Value reset to 0 when credit replenish
+    double userHddReqResTimeInSecond;				//All user hdd requests' response time for system in one second
+    double userHddReqResTimeInPeriod;				//All user hdd requests' response time for system in one period
     double sysSsdReqResTime;					    	//All system ssd requests' response time for system
+    double sysSsdReqResTimeInSecond;				//All system ssd requests' response time for system in one second
+    double sysSsdReqResTimeInPeriod;				//All system ssd requests' response time for system in one period
     double sysHddReqResTime;					    	//All system hdd requests' response time for system
-    double sysSsdReqResTimeInPeriod;				//All system ssd requests' response time for system in one period, Value reset to 0 when credit replenish
-    double sysHddReqResTimeInPeriod;				//All system hdd requests' response time for system in one period, Value reset to 0 when credit replenish
+    double sysHddReqResTimeInSecond;				//All system hdd requests' response time for system in one second
+    double sysHddReqResTimeInPeriod;				//All system hdd requests' response time for system in one period
   } systemInfo;
   
   /*建立host的queue list*/
