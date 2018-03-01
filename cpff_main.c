@@ -183,7 +183,6 @@ void initialize(char *par[]) {
 
   /*建立host queue*/
   hostQueue = build_host_queue();
-  // printf("Host queue's memory address: %p\n", &hostQueue);
   if(hostQueue == NULL) {
     print_error(-1, "Can't build Host Queue");
   }
@@ -370,8 +369,8 @@ void execute_CPFF_framework() {
   cpffSystemTime = hostQueue->head->r.arrivalTime;
   while(1) {
     double ssdServiceTime ,hddServiceTime;
-  
-    printf(COLOR_BB"\n\tCPFF System Time: %f\n"COLOR_RESET, cpffSystemTime);
+    print_progress(cpffSystemTime, sysInfo.totalReq, sysInfo.doneSsdSysReq+sysInfo.doneHddSysReq+sysInfo.doneSsdUserReq+sysInfo.doneHddUserReq);
+    // printf(COLOR_BB"\n\tCPFF System Time: %f\n"COLOR_RESET, cpffSystemTime);
     // print_credit();
 
     /*執行prize caching，根據系統時間(cpffSystemTime)將host queue內的request送至對應的user queue內*/ 
@@ -433,8 +432,8 @@ void execute_CPFF_framework() {
     }
     // print_queue_content(hddDeviceQueue, "HDD Device queue");
 
-    // printf(COLOR_RB"ssdReqCompleteTime: %f\thddReqCompleteTime: %f\thost: %f\n"COLOR_RESET,ssdReqCompleteTime, hddReqCompleteTime, hostQueue->head->r.arrivalTime);
-    // printf("SSD Device Q: %d\nHDD Device Q: %d\nU1 SSD Q: %d\nU1 HDD Q: %d\n", ssdDeviceQueue->size, hddDeviceQueue->size, user[0].ssdQueue->size, user[0].hddQueue->size);    
+    printf(COLOR_RB"\nssdReqCompleteTime: %f\thddReqCompleteTime: %f\thost: %f\n"COLOR_RESET,ssdReqCompleteTime, hddReqCompleteTime, hostQueue->head->r.arrivalTime);
+    printf("SSD Device Q: %d\nHDD Device Q: %d\nU1 SSD Q: %d\nU1 HDD Q: %d\nU2 SSD Q: %d\nU2 HDD Q: %d\n", ssdDeviceQueue->size, hddDeviceQueue->size, user[1].ssdQueue->size, user[1].hddQueue->size);    
     // print_cache_by_LRU_and_users();
 
     /*All requests have been done*/
@@ -505,15 +504,14 @@ double shift_cpffSystemTime(double ssdReqCompleteTime, double hddReqCompleteTime
       // printf("Host\n");      
     }
   }
-  printf("Minimal: %f, Idle counter: %d\n", minimal, shiftIdleTimeCounter);
-  
+
   if(minimal == cpffSystemTime) {
     shiftIdleTimeCounter++;
 
     /*Shift Idle Time, 選擇離cpffSystemTime最近的時間，並且回傳*/
     if(shiftIdleTimeCounter == 3) {
       // printf("\n\nShift Idle Time\n\n");
-      char c = getchar();
+      // char c = getchar();
       int arrValidElement = 4;
       double arr[4];
       if(is_empty_queue(hostQueue)) {
@@ -831,6 +829,7 @@ int main(int argc, char *argv[]) {
   initialize(&par[0]);
 
   execute_CPFF_framework();
+  print_progress(cpffSystemTime, sysInfo.totalReq, sysInfo.doneSsdSysReq+sysInfo.doneHddSysReq+sysInfo.doneSsdUserReq+sysInfo.doneHddUserReq);
 
   /*Remove Disksim(SSD and HDD simulators)*/
   rm_disksim();

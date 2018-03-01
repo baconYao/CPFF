@@ -50,7 +50,7 @@ void print_REQ(REQ *r, char* str) {
  * @param {unsigned long} currentREQ [目前數量]
  * @param {unsigned long} totalREQ [整體數量]
  */
-void print_progress(unsigned long currentREQ, unsigned long totalREQ, unsigned long currentMeta, unsigned long currentCache) {
-	printf ("\rProgress:%9lu / %9lu Meta: %6lu Cache: %8lu", currentREQ, totalREQ, currentMeta, currentCache);
+void print_progress(double cpffSystemTime, unsigned long totalREQ, unsigned long doneREQ) {
+	printf ("\rCPFF System Time:%f Progress:%lu / %lu", cpffSystemTime, doneREQ, totalREQ);
 	fflush (stdout);
 }

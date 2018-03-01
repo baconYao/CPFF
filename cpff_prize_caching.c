@@ -263,7 +263,6 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, system
 
     /*host queue內沒有request*/
     if(is_empty_queue(hostQueue)) {
-      printf("Host Q is empty\n");
       break;
     }
 

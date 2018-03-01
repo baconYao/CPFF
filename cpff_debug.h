@@ -19,5 +19,5 @@
   void print_REQ(REQ *r, char* str);
   
 	/*印出進度*/
-	void print_progress(unsigned long currentREQ, unsigned long totalREQ, unsigned long currentMeta, unsigned long currentCache);
+	void print_progress(double cpffSystemTime, unsigned long totalREQ, unsigned long doneREQ);
 #endif
