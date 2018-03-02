@@ -110,6 +110,7 @@ CPFF_CD = cpff_static_credit.c
 
 CPFF_BUG = cpff_debug.c
 CPFF_IPC = cpff_ipc.c
+CPFF_STA = cpff_statistic.c
 CPFF_STR = cpff_structure.c
 CPFF_DIS_INT = cpff_disksim_interface.c
 
@@ -127,7 +128,7 @@ DISKSIM_SRC = disksim.c disksim_intr.c disksim_pfsim.c \
 	disksim_simpledisk.c disksim_device.c \
 	disksim_loadparams.c \
 	raw_layout.c \
-	$(CPFF_PC) $(CPFF_CS) $(CPFF_CD) $(CPFF_BUG) $(CPFF_IPC) $(CPFF_STR) $(CPFF_DIS_INT) 
+	$(CPFF_PC) $(CPFF_CS) $(CPFF_CD) $(CPFF_BUG) $(CPFF_IPC) $(CPFF_STR) $(CPFF_STA) $(CPFF_DIS_INT) 
 
 DISKSIM_OBJ = $(DISKSIM_SRC:.c=.o) 
 

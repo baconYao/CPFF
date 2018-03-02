@@ -44,6 +44,8 @@
   /*定義user的structure格式*/
   typedef struct userInfo {
     unsigned int globalWeight;    // 全域的weight
+    double ssdCredit;
+    double hddCredit;
     unsigned long totalReq;		//Request數量 (include user and system request)
     unsigned long totalSsdReq;		//SSD Request數量 (include user and system ssd request)
     unsigned long totalHddReq;		//HDD Request數量 (include user and system hdd request)
