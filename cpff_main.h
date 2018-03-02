@@ -41,3 +41,4 @@ void period_csv_statistics(systemInfo *sysInfo, userInfo *user, double systemTim
 void second_record_statistics(systemInfo *sysInfo, userInfo *user, double systemTime);
 void second_csv_statistics(systemInfo *sysInfo, userInfo *user, double systemTime);
 void reset_second_value(systemInfo *sysInfo, userInfo *user);
+void final_result_statistics(systemInfo *sysInfo, userInfo *user);

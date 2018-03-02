@@ -15,6 +15,7 @@ FILE *systemSecondRecord;   //系統每second的記錄檔
 FILE *systemPeriodRecord;   //系統每period的記錄檔
 FILE *eachUserSecondRecord[NUM_OF_USER];   //每個user的每second記錄檔
 FILE *eachUserPeriodRecord[NUM_OF_USER];   //每個user的每period記錄檔
+FILE *finalResult;   //每個user的每period記錄檔
 char *par[6];         //CPFF system arguments
 int totalWeight = 0;  //所有user的global weight累加
 int shiftIdleTimeCounter = 0;
@@ -537,7 +538,7 @@ void second_record_statistics(systemInfo *sysInfo, userInfo *user, double system
     fprintf(secondStatisticRecord, "\nSystem Info\n");
     fprintf(secondStatisticRecord, "All user requests in second, Read: %lu, Write: %lu\n", sysInfo->userReadReqInSecond, sysInfo->userWriteReqInSecond);
     fprintf(secondStatisticRecord, "All system requests in second, SSD Read: %lu, SSD Write: %lu, HDD Write: %lu\n", sysInfo->sysSsdReadReqInSecond, sysInfo->sysSsdWriteReqInSecond, sysInfo->sysHddWriteReqInSecond);
-    fprintf(secondStatisticRecord, "All evictCount: %lu, dirtyCount: %lu, hitCount: %lu, missCount: %lu\n", sysInfo->evictCount, sysInfo->dirtyCount, sysInfo->hitCount, sysInfo->missCount);
+    fprintf(secondStatisticRecord, "All evictCountInSecond: %lu, dirtyCountInSecond: %lu, hitCountInSecond: %lu, missCountInSecond: %lu\n", sysInfo->evictCountInSecond, sysInfo->dirtyCountInSecond, sysInfo->hitCountInSecond, sysInfo->missCountInSecond);
     fprintf(secondStatisticRecord, "All doneSsdSysReqInSecond: %lu, doneHddSysReqInSecond: %lu, doneSsdUserReqInSecond: %lu, doneHddUserReqInSecond: %lu\n", sysInfo->doneSsdSysReqInSecond, sysInfo->doneHddSysReqInSecond, sysInfo->doneSsdUserReqInSecond, sysInfo->doneHddUserReqInSecond);
     fprintf(secondStatisticRecord, "All sysSsdReqResTimeInSecond: %f, sysHddReqResTimeInSecond: %f, userSsdReqResTimeInSecond: %f, userHddReqResTimeInSecond: %f\n", sysInfo->sysSsdReqResTimeInSecond, sysInfo->sysHddReqResTimeInSecond, sysInfo->userSsdReqResTimeInSecond, sysInfo->userHddReqResTimeInSecond);
     
@@ -546,7 +547,7 @@ void second_record_statistics(systemInfo *sysInfo, userInfo *user, double system
       fprintf(secondStatisticRecord, "\nUser %d\n", i+1);
       fprintf(secondStatisticRecord, "user requests in second, Read: %lu, Write: %lu\n", user[i].userReadReqInSecond, user[i].userWriteReqInSecond);
       fprintf(secondStatisticRecord, "system requests in second, SSD Read: %lu, SSD Write: %lu, HDD Write: %lu\n", user[i].sysSsdReadReqInSecond, user[i].sysSsdWriteReqInSecond, user[i].sysHddWriteReqInSecond);
-      fprintf(secondStatisticRecord, "evictCount: %lu, dirtyCount: %lu, hitCount: %lu, missCount: %lu\n", user[i].evictCount, user[i].dirtyCount, user[i].hitCount, user[i].missCount);
+      fprintf(secondStatisticRecord, "evictCountInSecond: %lu, dirtyCountInSecond: %lu, hitCountInSecond: %lu, missCountInSecond: %lu\n", user[i].evictCountInSecond, user[i].dirtyCountInSecond, user[i].hitCountInSecond, user[i].missCountInSecond);
       fprintf(secondStatisticRecord, "doneSsdSysReqInSecond: %lu, doneHddSysReqInSecond: %lu, doneSsdUserReqInSecond: %lu, doneHddUserReqInSecond: %lu\n", user[i].doneSsdSysReqInSecond, user[i].doneHddSysReqInSecond, user[i].doneSsdUserReqInSecond, user[i].doneHddUserReqInSecond);
       fprintf(secondStatisticRecord, "sysSsdReqResTimeInSecond: %f, sysHddReqResTimeInSecond: %f, userSsdReqResTimeInSecond: %f, userHddReqResTimeInSecond: %f\n", user[i].sysSsdReqResTimeInSecond, user[i].sysHddReqResTimeInSecond, user[i].userSsdReqResTimeInSecond, user[i].userHddReqResTimeInSecond);
     }
@@ -634,7 +635,7 @@ void period_record_statistics(systemInfo *sysInfo, userInfo *user, double system
     fprintf(periodStatisticRecord, "\nSystem Info\n");
     fprintf(periodStatisticRecord, "All user requests in period, Read: %lu, Write: %lu\n", sysInfo->userReadReqInPeriod, sysInfo->userWriteReqInPeriod);
     fprintf(periodStatisticRecord, "All system requests in period, SSD Read: %lu, SSD Write: %lu, HDD Write: %lu\n", sysInfo->sysSsdReadReqInPeriod, sysInfo->sysSsdWriteReqInPeriod, sysInfo->sysHddWriteReqInPeriod);
-    fprintf(periodStatisticRecord, "All evictCount: %lu, dirtyCount: %lu, hitCount: %lu, missCount: %lu\n", sysInfo->evictCount, sysInfo->dirtyCount, sysInfo->hitCount, sysInfo->missCount);
+    fprintf(periodStatisticRecord, "All evictCountInPeriod: %lu, dirtyCountInPeriod: %lu, hitCountInPeriod: %lu, missCountInPeriod: %lu\n", sysInfo->evictCountInPeriod, sysInfo->dirtyCountInPeriod, sysInfo->hitCountInPeriod, sysInfo->missCountInPeriod);
     fprintf(periodStatisticRecord, "All doneSsdSysReqInPeriod: %lu, doneHddSysReqInPeriod: %lu, doneSsdUserReqInPeriod: %lu, doneHddUserReqInPeriod: %lu\n", sysInfo->doneSsdSysReqInPeriod, sysInfo->doneHddSysReqInPeriod, sysInfo->doneSsdUserReqInPeriod, sysInfo->doneHddUserReqInPeriod);
     fprintf(periodStatisticRecord, "All sysSsdReqResTimeInPeriod: %f, sysHddReqResTimeInPeriod: %f, userSsdReqResTimeInPeriod: %f, userHddReqResTimeInPeriod: %f\n", sysInfo->sysSsdReqResTimeInPeriod, sysInfo->sysHddReqResTimeInPeriod, sysInfo->userSsdReqResTimeInPeriod, sysInfo->userHddReqResTimeInPeriod);
     
@@ -643,12 +644,39 @@ void period_record_statistics(systemInfo *sysInfo, userInfo *user, double system
       fprintf(periodStatisticRecord, "\nUser %d\n", i+1);
       fprintf(periodStatisticRecord, "user requests in period, Read: %lu, Write: %lu\n", user[i].userReadReqInPeriod, user[i].userWriteReqInPeriod);
       fprintf(periodStatisticRecord, "system requests in period, SSD Read: %lu, SSD Write: %lu, HDD Write: %lu\n", user[i].sysSsdReadReqInPeriod, user[i].sysSsdWriteReqInPeriod, user[i].sysHddWriteReqInPeriod);
-      fprintf(periodStatisticRecord, "evictCount: %lu, dirtyCount: %lu, hitCount: %lu, missCount: %lu\n", user[i].evictCount, user[i].dirtyCount, user[i].hitCount, user[i].missCount);
+      fprintf(periodStatisticRecord, "evictCountInPeriod: %lu, dirtyCountInPeriod: %lu, hitCountInPeriod: %lu, missCountInPeriod: %lu\n", user[i].evictCountInPeriod, user[i].dirtyCountInPeriod, user[i].hitCountInPeriod, user[i].missCountInPeriod);
       fprintf(periodStatisticRecord, "doneSsdSysReqInPeriod: %lu, doneHddSysReqInPeriod: %lu, doneSsdUserReqInPeriod: %lu, doneHddUserReqInPeriod: %lu\n", user[i].doneSsdSysReqInPeriod, user[i].doneHddSysReqInPeriod, user[i].doneSsdUserReqInPeriod, user[i].doneHddUserReqInPeriod);
       fprintf(periodStatisticRecord, "sysSsdReqResTimeInPeriod: %f, sysHddReqResTimeInPeriod: %f, userSsdReqResTimeInPeriod: %f, userHddReqResTimeInPeriod: %f\n", user[i].sysSsdReqResTimeInPeriod, user[i].sysHddReqResTimeInPeriod, user[i].userSsdReqResTimeInPeriod, user[i].userHddReqResTimeInPeriod);
     }
 
     fprintf(periodStatisticRecord, "-----------------------------\n");
+    
+    return;
+  }
+}
+
+void final_result_statistics(systemInfo *sysInfo, userInfo *user) {
+  if(sysInfo != NULL) {
+    
+    fprintf(finalResult, "\n-----------------------------\n");
+    fprintf(finalResult, "\nSystem Info\n");
+    fprintf(finalResult, "All user requests in period, Read: %lu, Write: %lu\n", sysInfo->userReadReq, sysInfo->userWriteReq);
+    fprintf(finalResult, "All system requests in period, SSD Read: %lu, SSD Write: %lu, HDD Write: %lu\n", sysInfo->sysSsdReadReq, sysInfo->sysSsdWriteReq, sysInfo->sysHddWriteReq);
+    fprintf(finalResult, "All evictCount: %lu, dirtyCount: %lu, hitCount: %lu, missCount: %lu\n", sysInfo->evictCount, sysInfo->dirtyCount, sysInfo->hitCount, sysInfo->missCount);
+    fprintf(finalResult, "All doneSsdSysReq: %lu, doneHddSysReq: %lu, doneSsdUserReq: %lu, doneHddUserReq: %lu\n", sysInfo->doneSsdSysReq, sysInfo->doneHddSysReq, sysInfo->doneSsdUserReq, sysInfo->doneHddUserReq);
+    fprintf(finalResult, "All sysSsdReqResTime: %f, sysHddReqResTime: %f, userSsdReqResTime: %f, userHddReqResTime: %f\n", sysInfo->sysSsdReqResTime, sysInfo->sysHddReqResTime, sysInfo->userSsdReqResTime, sysInfo->userHddReqResTime);
+    
+    int i;
+    for(i = 0; i < NUM_OF_USER; i++) {
+      fprintf(finalResult, "\nUser %d\n", i+1);
+      fprintf(finalResult, "user requests in period, Read: %lu, Write: %lu\n", user[i].userReadReq, user[i].userWriteReq);
+      fprintf(finalResult, "system requests in period, SSD Read: %lu, SSD Write: %lu, HDD Write: %lu\n", user[i].sysSsdReadReq, user[i].sysSsdWriteReq, user[i].sysHddWriteReq);
+      fprintf(finalResult, "evictCount: %lu, dirtyCount: %lu, hitCount: %lu, missCount: %lu\n", user[i].evictCount, user[i].dirtyCount, user[i].hitCount, user[i].missCount);
+      fprintf(finalResult, "doneSsdSysReq: %lu, doneHddSysReq: %lu, doneSsdUserReq: %lu, doneHddUserReq: %lu\n", user[i].doneSsdSysReq, user[i].doneHddSysReq, user[i].doneSsdUserReq, user[i].doneHddUserReq);
+      fprintf(finalResult, "sysSsdReqResTime: %f, sysHddReqResTime: %f, userSsdReqResTime: %f, userHddReqResTime: %f\n", user[i].sysSsdReqResTime, user[i].sysHddReqResTime, user[i].userSsdReqResTime, user[i].userHddReqResTime);
+    }
+
+    fprintf(finalResult, "-----------------------------\n");
     
     return;
   }
@@ -746,6 +774,12 @@ int main(int argc, char *argv[]) {
   execute_CPFF_framework();
   print_progress(cpffSystemTime, sysInfo.totalReq, sysInfo.doneSsdSysReq+sysInfo.doneHddSysReq+sysInfo.doneSsdUserReq+sysInfo.doneHddUserReq, hostQueue->size);
 
+  //Open finalResult record file
+  if((finalResult = fopen("./cpff_statistics_dir/Final_Statistic_Record.txt", "w")) == NULL) {
+    print_error(-1, "Can't open the cpff_statistics_dir/Final_Statistic_Record.txt file");
+  }
+  final_result_statistics(&sysInfo, user);
+
   /*Remove Disksim(SSD and HDD simulators)*/
   rm_disksim();
   
@@ -756,6 +790,7 @@ int main(int argc, char *argv[]) {
   //printf("Main Process waits for: %d\n", wait(NULL));
   //printf("Main Process waits for: %d\n", wait(NULL));
   
+  fclose(finalResult);
   fclose(secondStatisticRecord);
   fclose(periodStatisticRecord);
   fclose(systemSecondRecord);
