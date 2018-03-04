@@ -36,30 +36,34 @@
 	static unsigned long userCacheCount[NUM_OF_USER];
 
 	/*USER CACHE INITIALIZATION*/
-	int init_user_cache(userInfo *user);
+	int init_user_cache(userInfo *user, int totalWeight);
 	
-	// /*INSERT CACHE TABLE BY USER*/
+	/*INSERT CACHE TABLE BY USER*/
 	SSD_CACHE *insert_cache_by_user(unsigned long diskBlk, int reqFlag, unsigned userno, double time, struct metaBlock *meta, userInfo *user);
 
-	// /*CACHE EVICTION POLICY:SPECIFIC Block with min prize and User*/
+	/*CACHE EVICTION POLICY:SPECIFIC Block with min prize and User*/
 	SSD_CACHE *evict_cache_from_LRU_with_min_prize_by_user(double minPrize, unsigned userno, userInfo *user);
 
-	// /*SEARCH CACHE BY USER*/
+	/*SEARCH CACHE BY USER*/
 	SSD_CACHE *search_cache_by_user(unsigned long diskBlk, unsigned userno);
 
-	// /*CHECK CACHE FULL BY USER*/
+	/*CHECK CACHE FULL BY USER*/
 	int is_full_cache_by_user(unsigned userno);
 
-	// /*GET FREE CACHE BY USER*/
+	/*GET FREE CACHE BY USER*/
 	unsigned long get_free_cache_by_user(unsigned userno);
 
-	// /*CACHING TABLE OUTPUT*/
+	/*CACHING TABLE OUTPUT*/
 	void print_cache_by_LRU_and_users();
 
-	// /*GET CACHE COUNT*/
+	/*GET CACHE COUNT*/
 	unsigned long get_cache_cnt();
 
-	// /*寫檔至 Result File*/
-	void cache_write_result_file(FILE **result, userInfo *user);
+	/*寫檔至 Result File*/
+	// void cache_write_result_file(FILE **result, userInfo *user);
 	
+	/*將SSD Page Number轉成Disksim Block(Sector)*/	
+	unsigned long ssd_page_to_sim_sector(unsigned long ssdPageno);
+
+
 #endif

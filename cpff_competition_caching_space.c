@@ -9,12 +9,8 @@
  * [針對Trace指定不同User權重所占用的空間]
  * @return {int} 0/-1 []
  */
-int init_user_cache(userInfo *user) {
-  totalWeight = 0;
+int init_user_cache(userInfo *user, int totalWeight) {
   unsigned i;
-  for (i = 0; i < NUM_OF_USER; i++) {
-    totalWeight += user[i].globalWeight;
-  }
 
   if (totalWeight == 0){
     print_error(0, "[competition_caching_space.c] Total User Weight = ");
@@ -51,7 +47,9 @@ int init_user_cache(userInfo *user) {
  * @return {int} 0/-1 [FULL(-1) or not(0)]
  */
  SSD_CACHE *insert_cache_by_user(unsigned long diskBlk, int reqFlag, unsigned userno, double time, struct metaBlock *meta, userInfo *user) {
-  unsigned unum = userno;
+  #ifdef CPFF_COMPETITION_CACHING_SPACE
+    unsigned unum = 1;
+  #endif
   
   SSD_CACHE *search;
   search = search_cache_by_user(diskBlk, unum);
@@ -112,7 +110,9 @@ int init_user_cache(userInfo *user) {
  * @return {SSD_CACHE*} &ssdCache/NULL [回傳欲剔除的cached page;NULL:未找到]
  */
 SSD_CACHE *evict_cache_from_LRU_with_min_prize_by_user(double minPrize, unsigned userno, userInfo *user) {
-  unsigned unum = userno;
+  #ifdef CPFF_COMPETITION_CACHING_SPACE
+    unsigned unum = 1;
+  #endif
     
   //printf("start evicting...\n");
   //printCACHEByLRUandUsers();
@@ -158,7 +158,9 @@ SSD_CACHE *evict_cache_from_LRU_with_min_prize_by_user(double minPrize, unsigned
  * @return {SSD_CACHE*} &ssdCache/NULL [回傳欲搜尋的cached page;NULL:未找到]
  */
 SSD_CACHE *search_cache_by_user(unsigned long diskBlk, unsigned userno) {
-  unsigned unum = userno;
+  #ifdef CPFF_COMPETITION_CACHING_SPACE
+    unsigned unum = 1;
+  #endif  
     
   unsigned long pageno;
   for (pageno = userCacheStart[unum-1]; pageno < userCacheStart[unum-1]+userCacheSize[unum-1]; pageno++) {
@@ -178,7 +180,9 @@ SSD_CACHE *search_cache_by_user(unsigned long diskBlk, unsigned userno) {
  * @return CACHE_FULL/CACHE_NOT_FULL [Full:1; Not full:0]
  */
 int is_full_cache_by_user(unsigned userno) {
-  unsigned unum = userno;
+  #ifdef CPFF_COMPETITION_CACHING_SPACE
+    unsigned unum = 1;
+  #endif
 
   if (userFreeCount[unum-1] == 0)
     return CACHE_FULL;
@@ -194,7 +198,9 @@ int is_full_cache_by_user(unsigned userno) {
  * @return {unsigned long} pageno [Page Number]
  */
 unsigned long get_free_cache_by_user(unsigned userno) {
-  unsigned unum = userno;
+  #ifdef CPFF_COMPETITION_CACHING_SPACE
+    unsigned unum = 1;
+  #endif
   unsigned long pageno;
   for (pageno = userCacheStart[unum-1]; pageno < userCacheStart[unum-1]+userCacheSize[unum-1]; pageno++) {
     if (ssdCache[pageno].freeFlag == PAGE_FLAG_FREE) {
@@ -240,10 +246,19 @@ unsigned long get_cache_cnt() {
  * [寫檔至 Result File]
  * @param {FILE*} st [寫檔Pointer]
  */
-void cache_write_result_file(FILE **result, userInfo *user) {
-  unsigned i;
-  fprintf(*result, "[competition_caching_space.c] Total User Weight:%u, Total Cache Size(Pages):%u\n", totalWeight, SSD_CACHING_SPACE_BY_PAGES);
-  for (i = 0; i < NUM_OF_USER; i++) {
-    fprintf(*result, "[competition_caching_space.c] User%u: Weight:%u Start(Pages):%lu, Size(Pages):%lu\n", i+1, user[i].globalWeight, userCacheStart[i], userCacheSize[i]);
-  }
+// void cache_write_result_file(FILE **result, userInfo *user) {
+//   unsigned i;
+//   fprintf(*result, "[competition_caching_space.c] Total User Weight:%u, Total Cache Size(Pages):%u\n", totalWeight, SSD_CACHING_SPACE_BY_PAGES);
+//   for (i = 0; i < NUM_OF_USER; i++) {
+//     fprintf(*result, "[competition_caching_space.c] User%u: Weight:%u Start(Pages):%lu, Size(Pages):%lu\n", i+1, user[i].globalWeight, userCacheStart[i], userCacheSize[i]);
+//   }
+// }
+
+/**
+ * [將SSD Page Number轉成Disksim Block(Sector)]
+ * @param {unsigned long} ssdPageno [SSD Page Number]
+ * @return {unsigned long} - [Block(Sector) Number for SSDsim(Disksim)]
+ */
+ unsigned long ssd_page_to_sim_sector(unsigned long ssdPageno) {
+	return ssdPageno*SSD_PAGE2SECTOR;
 }
