@@ -11,6 +11,12 @@
 	#include "cpff_debug.h"
 
 	void statistics_done_func(systemInfo *sys, userInfo *user, REQ *r, char *reqType);
-
-
+  void reset_second_value(systemInfo *sysInfo, userInfo *user);
+  void reset_period_value(systemInfo *sysInfo, userInfo *user);
+  void second_record_statistics(systemInfo *sysInfo, userInfo *user, double systemTime, FILE **secondStatisticRecord);
+  void second_csv_statistics(systemInfo *sysInfo, userInfo *user, double systemTime, FILE **systemSecondRecord, FILE **eachUserSecondRecord);
+  void period_record_statistics(systemInfo *sysInfo, userInfo *user, double systemTime, FILE **periodStatisticRecord);
+  void period_csv_statistics(systemInfo *sysInfo, userInfo *user, double systemTime, FILE **systemPeriodRecord, FILE **eachUserPeriodRecord);
+  void final_result_statistics(systemInfo *sysInfo, userInfo *user, FILE **finalResult);
+  
 #endif

@@ -1,8 +1,6 @@
 #include "cpff_main.h"
 
 QUE *hostQueue;                   //claim host queue
-// QUE *ssdDeviceQueue;              //claim SSD device queue
-// QUE *hddDeviceQueue;              //claim HDD device queue
 systemInfo sysInfo;               //Record system information
 userInfo user[NUM_OF_USER];       //建立user
 pid_t SSDsimProc, HDDsimProc;     //Sub-process id: SSD and HDD simulator
@@ -18,9 +16,9 @@ FILE *eachUserPeriodRecord[NUM_OF_USER];   //每個user的每period記錄檔
 FILE *finalResult;   //每個user的每period記錄檔
 char *par[6];         //CPFF system arguments
 int totalWeight = 0;  //所有user的global weight累加
-int shiftIdleTimeCounter = 0;
-int ssdCandidate[NUM_OF_USER];
-int hddCandidate[NUM_OF_USER];
+int shiftIdleTimeCounter = 0;     //用來處理IdleTime的計數器
+int ssdCandidate[NUM_OF_USER];    //在SSD scheduler決定哪個user可以dispatch request到disksim
+int hddCandidate[NUM_OF_USER];    //在HDD scheduler決定哪個user可以dispatch request到disksim
 double cpffSystemTime = 0.0;      //cpff的系統時間
 
 double nextReplenishCreditTime = TIME_PERIOD;    //credit重新補充的時間，每次加1000.0(ms)，預設為1000.0ms = 1 second
@@ -330,10 +328,6 @@ void initialize(char *par[]) {
     totalWeight += weight;              //累加所有user的globalWeight
   }
 
-  // /*建立device queue*/
-  // ssdDeviceQueue = build_device_queue("SSD");
-  // hddDeviceQueue = build_device_queue("HDD");
-
   /*初始化 PC metablock table*/
   if(init_meta_table() != 0) {
     print_error(-1, "Can't build user cache!");
@@ -348,7 +342,6 @@ void initialize(char *par[]) {
   if(init_credit(user, totalWeight) != 0) {
     print_error(-1, "Can't initialize user credit!");
   }
-
   
   /*讀取trace file requests*/ 
   REQ *tmp;
@@ -383,18 +376,12 @@ void execute_CPFF_framework() {
   double ssdReqCompleteTime = hostQueue->head->r.arrivalTime;      //表示被送進SSD sim 的SSD request在系統時間(cpffSystemTime)的甚麼時候做完。 (ssdReqCompleteTime = request servie time + cpffSystemTime)
   double hddReqCompleteTime = hostQueue->head->r.arrivalTime;      //表示被送進HDD sim 的HDD request在系統時間(cpffSystemTime)的甚麼時候做完。 (hddReqCompleteTime = request servie time + cpffSystemTime)
   cpffSystemTime = hostQueue->head->r.arrivalTime;
-  // printf(COLOR_RB"\nssdReqCompleteTime: %f\thddReqCompleteTime: %f\thost: %f\n"COLOR_RESET,ssdReqCompleteTime, hddReqCompleteTime, hostQueue->head->r.arrivalTime);
   while(1) {
     double ssdServiceTime ,hddServiceTime;
     print_progress(cpffSystemTime, sysInfo.totalReq, sysInfo.doneSsdSysReq+sysInfo.doneHddSysReq+sysInfo.doneSsdUserReq+sysInfo.doneHddUserReq, hostQueue->size);
-
-    
-    // printf("U1 SSD Q: %d (Done: %d)\nU1 HDD Q: %d (Done: %d)\nU2 SSD Q: %d (Done: %d)\nU2 HDD Q: %d (Done: %d)\n", user[0].ssdQueue->size, user[0].doneSsdSysReq+user[0].doneSsdUserReq, user[0].hddQueue->size, user[0].doneHddSysReq+user[0].doneHddUserReq, user[1].ssdQueue->size, user[1].doneSsdSysReq+user[1].doneSsdUserReq, user[1].hddQueue->size, user[1].doneHddSysReq+user[1].doneHddUserReq);    
     
     /*執行prize caching，根據系統時間(cpffSystemTime)將host queue內的request送至對應的user queue內*/ 
     prize_caching(cpffSystemTime, user, hostQueue, &sysInfo);
-    // c = getchar();
-
   
     ssdReqCompleteTime = ssd_credit_scheduler(&sysInfo, user, cpffSystemTime, ssdCandidate); 
     if(ssdReqCompleteTime < cpffSystemTime) {
@@ -406,23 +393,13 @@ void execute_CPFF_framework() {
       hddReqCompleteTime = cpffSystemTime;
     }
 
-    // if(!is_empty_queue(hostQueue)) {
-    //   printf(COLOR_RB"!!!ssdReqCompleteTime: %f\thddReqCompleteTime: %f\thost: %f\n\n", ssdReqCompleteTime, hddReqCompleteTime, hostQueue->head->r.arrivalTime);
-    // } else {
-    //   printf(COLOR_RB"!!!ssdReqCompleteTime: %f\thddReqCompleteTime: %f\n\n", ssdReqCompleteTime, hddReqCompleteTime);
-    // }
-    // c = getchar();
-    // printf(COLOR_BB"\nHost: %d\nU1 SSD Q: %d (Done: %d)\nU1 HDD Q: %d (Done: %d)\nU2 SSD Q: %d (Done: %d)\nU2 HDD Q: %d (Done: %d)\n"COLOR_RESET, hostQueue->size, user[0].ssdQueue->size, user[0].doneSsdSysReq+user[0].doneSsdUserReq, user[0].hddQueue->size, user[0].doneHddSysReq+user[0].doneHddUserReq, user[1].ssdQueue->size, user[1].doneSsdSysReq+user[1].doneSsdUserReq, user[1].hddQueue->size, user[1].doneHddSysReq+user[1].doneHddUserReq);    
-    // print_credit(user);
-    
-
     /*All requests have been done*/
     if(is_empty_queue(hostQueue) && are_all_user_hdd_queue_empty(user) && are_all_user_ssd_queue_empty(user)) {
       /*在system要結束時(cpffSystemTime可能不會剛好是1000ms的倍數)，也必須統計結果*/
-      period_record_statistics(&sysInfo, user, cpffSystemTime);
-      period_csv_statistics(&sysInfo, user, cpffSystemTime);
-      second_record_statistics(&sysInfo, user, cpffSystemTime);
-      second_csv_statistics(&sysInfo, user, cpffSystemTime);
+      period_record_statistics(&sysInfo, user, cpffSystemTime, &periodStatisticRecord);
+      period_csv_statistics(&sysInfo, user, cpffSystemTime, &systemPeriodRecord, &eachUserPeriodRecord);
+      second_record_statistics(&sysInfo, user, cpffSystemTime, &secondStatisticRecord);
+      second_csv_statistics(&sysInfo, user, cpffSystemTime, &systemSecondRecord, &eachUserSecondRecord);
       return;   //return to main()
     }
 
@@ -433,14 +410,13 @@ void execute_CPFF_framework() {
     if(cpffSystemTime == nextReplenishCreditTime) {
       /*每隔STAT_FOR_TIME_PERIODS * cpffSystemTime記錄一次*/
       if((int)cpffSystemTime % (STAT_FOR_TIME_PERIODS * 1000) == 0) {
-        period_record_statistics(&sysInfo, user, cpffSystemTime);
-        period_csv_statistics(&sysInfo, user, cpffSystemTime);
+        period_record_statistics(&sysInfo, user, cpffSystemTime, &periodStatisticRecord);
+        period_csv_statistics(&sysInfo, user, cpffSystemTime, &systemPeriodRecord, &eachUserPeriodRecord);
         reset_period_value(&sysInfo, user);
       }
-      // print_credit(user);
       /*每1000ms做的事情*/
-      second_record_statistics(&sysInfo, user, cpffSystemTime);
-      second_csv_statistics(&sysInfo, user, cpffSystemTime);
+      second_record_statistics(&sysInfo, user, cpffSystemTime, &secondStatisticRecord);
+      second_csv_statistics(&sysInfo, user, cpffSystemTime, &systemSecondRecord, &eachUserSecondRecord);
       reset_second_value(&sysInfo, user);
 
       /*補充credit*/
@@ -448,15 +424,7 @@ void execute_CPFF_framework() {
         print_error(-1, "Can't replenish user credit!");
       }
       nextReplenishCreditTime += TIME_PERIOD;   //推進下次補充credit的時間 (+1000ms)
-      // printf(CYAN_BOLD_ITALIC"Credit Replenish!!!!\n"COLOR_RESET);
-      // print_credit(user);
-      
-      // c = getchar();
     }
-
-    
-    // c = getchar();
-    
   }
 }
 
@@ -529,228 +497,6 @@ double shift_cpffSystemTime(double ssdReqCompleteTime, double hddReqCompleteTime
 }
 
 
-/*[每second就會記錄詳細資訊]*/
-void second_record_statistics(systemInfo *sysInfo, userInfo *user, double systemTime) {
-  if(sysInfo != NULL) {
-    
-    fprintf(secondStatisticRecord, "\n-----------------------------\n");
-    fprintf(secondStatisticRecord, "CPFF system time: %f\n", systemTime);
-    fprintf(secondStatisticRecord, "\nSystem Info\n");
-    fprintf(secondStatisticRecord, "All user requests in second, Read: %lu, Write: %lu\n", sysInfo->userReadReqInSecond, sysInfo->userWriteReqInSecond);
-    fprintf(secondStatisticRecord, "All system requests in second, SSD Read: %lu, SSD Write: %lu, HDD Write: %lu\n", sysInfo->sysSsdReadReqInSecond, sysInfo->sysSsdWriteReqInSecond, sysInfo->sysHddWriteReqInSecond);
-    fprintf(secondStatisticRecord, "All evictCountInSecond: %lu, dirtyCountInSecond: %lu, hitCountInSecond: %lu, missCountInSecond: %lu\n", sysInfo->evictCountInSecond, sysInfo->dirtyCountInSecond, sysInfo->hitCountInSecond, sysInfo->missCountInSecond);
-    fprintf(secondStatisticRecord, "All doneSsdSysReqInSecond: %lu, doneHddSysReqInSecond: %lu, doneSsdUserReqInSecond: %lu, doneHddUserReqInSecond: %lu\n", sysInfo->doneSsdSysReqInSecond, sysInfo->doneHddSysReqInSecond, sysInfo->doneSsdUserReqInSecond, sysInfo->doneHddUserReqInSecond);
-    fprintf(secondStatisticRecord, "All sysSsdReqResTimeInSecond: %f, sysHddReqResTimeInSecond: %f, userSsdReqResTimeInSecond: %f, userHddReqResTimeInSecond: %f\n", sysInfo->sysSsdReqResTimeInSecond, sysInfo->sysHddReqResTimeInSecond, sysInfo->userSsdReqResTimeInSecond, sysInfo->userHddReqResTimeInSecond);
-    
-    int i;
-    for(i = 0; i < NUM_OF_USER; i++) {
-      fprintf(secondStatisticRecord, "\nUser %d\n", i+1);
-      fprintf(secondStatisticRecord, "user requests in second, Read: %lu, Write: %lu\n", user[i].userReadReqInSecond, user[i].userWriteReqInSecond);
-      fprintf(secondStatisticRecord, "system requests in second, SSD Read: %lu, SSD Write: %lu, HDD Write: %lu\n", user[i].sysSsdReadReqInSecond, user[i].sysSsdWriteReqInSecond, user[i].sysHddWriteReqInSecond);
-      fprintf(secondStatisticRecord, "evictCountInSecond: %lu, dirtyCountInSecond: %lu, hitCountInSecond: %lu, missCountInSecond: %lu\n", user[i].evictCountInSecond, user[i].dirtyCountInSecond, user[i].hitCountInSecond, user[i].missCountInSecond);
-      fprintf(secondStatisticRecord, "doneSsdSysReqInSecond: %lu, doneHddSysReqInSecond: %lu, doneSsdUserReqInSecond: %lu, doneHddUserReqInSecond: %lu\n", user[i].doneSsdSysReqInSecond, user[i].doneHddSysReqInSecond, user[i].doneSsdUserReqInSecond, user[i].doneHddUserReqInSecond);
-      fprintf(secondStatisticRecord, "sysSsdReqResTimeInSecond: %f, sysHddReqResTimeInSecond: %f, userSsdReqResTimeInSecond: %f, userHddReqResTimeInSecond: %f\n", user[i].sysSsdReqResTimeInSecond, user[i].sysHddReqResTimeInSecond, user[i].userSsdReqResTimeInSecond, user[i].userHddReqResTimeInSecond);
-    }
-    fprintf(secondStatisticRecord, "-----------------------------\n");
-    
-    return;
-  }
-}
-
-/*[每second寫成csv紀錄檔(systemtime, SSD throughput, HDD throughput, SSD avg response time, HDD avg response time, hit rate)]*/
-void second_csv_statistics(systemInfo *sysInfo, userInfo *user, double systemTime) {
-  if(sysInfo != NULL) {
-    
-    double ssdAvgResponse, hddAvgResponse, ssdThroughput, hddThroughput, hitRate;
-    ssdThroughput = ((double)sysInfo->doneSsdUserReqInSecond * 4.0 / 1024) / 1.0;
-    hddThroughput = ((double)sysInfo->doneHddUserReqInSecond * 4.0 / 1024) / 1.0;
-    ssdAvgResponse = sysInfo->userSsdReqResTimeInSecond / (double)sysInfo->doneSsdUserReqInSecond;
-    hddAvgResponse = sysInfo->userHddReqResTimeInSecond / (double)sysInfo->doneHddUserReqInSecond;
-    hitRate = (double)sysInfo->hitCountInSecond / ((double)sysInfo->hitCountInSecond + (double)sysInfo->missCountInSecond);
-    fprintf(systemSecondRecord, "%f,%f,%f,%f,%f,%f\n", systemTime, ssdThroughput, hddThroughput, ssdAvgResponse, hddAvgResponse, hitRate);
-    
-    int i;
-    for(i = 0; i < NUM_OF_USER; i++) {
-      ssdThroughput = ((double)user[i].doneSsdUserReqInSecond * 4.0 / 1024) / 1.0;
-      hddThroughput = ((double)user[i].doneHddUserReqInSecond * 4.0 / 1024) / 1.0;
-      ssdAvgResponse = user[i].userSsdReqResTimeInSecond / (double)user[i].doneSsdUserReqInSecond;
-      hddAvgResponse = user[i].userHddReqResTimeInSecond / (double)user[i].doneHddUserReqInSecond;
-      hitRate = (double)user[i].hitCountInSecond / ((double)user[i].hitCountInSecond + (double)user[i].missCountInSecond);
-      fprintf(eachUserSecondRecord[i], "%f,%f,%f,%f,%f,%f\n", systemTime, ssdThroughput, hddThroughput, ssdAvgResponse, hddAvgResponse, hitRate);
-    }
-    return;
-  }
-}
-
-/*[This function is used to reset second value every second]*/
-void reset_second_value(systemInfo *sysInfo, userInfo *user) {
-  /*Reset system's second value*/
-  sysInfo->userReadReqInSecond = 0;
-  sysInfo->userWriteReqInSecond = 0;
-  sysInfo->sysSsdReadReqInSecond = 0;
-  sysInfo->sysSsdWriteReqInSecond = 0;
-  sysInfo->sysHddWriteReqInSecond = 0;
-  sysInfo->evictCountInSecond = 0;
-  sysInfo->dirtyCountInSecond = 0;
-  sysInfo->hitCountInSecond = 0;
-  sysInfo->missCountInSecond = 0;
-  sysInfo->doneSsdSysReqInSecond = 0;
-  sysInfo->doneHddSysReqInSecond = 0;
-  sysInfo->doneSsdUserReqInSecond = 0;
-  sysInfo->doneHddUserReqInSecond = 0;
-  sysInfo->userSsdReqResTimeInSecond = 0.0;
-  sysInfo->userHddReqResTimeInSecond = 0.0;
-  sysInfo->sysSsdReqResTimeInSecond = 0.0;
-  sysInfo->sysHddReqResTimeInSecond = 0.0;
-
-  /*Reset each user's second value*/
-  int i;
-  for(i = 0; i < NUM_OF_USER; i++) {
-    user[i].userReadReqInSecond = 0;
-    user[i].userWriteReqInSecond = 0;
-    user[i].sysSsdReadReqInSecond = 0;
-    user[i].sysSsdWriteReqInSecond = 0;
-    user[i].sysHddWriteReqInSecond = 0;
-    user[i].evictCountInSecond = 0;
-    user[i].dirtyCountInSecond = 0;
-    user[i].hitCountInSecond = 0;
-    user[i].missCountInSecond = 0;
-    user[i].doneSsdSysReqInSecond = 0;
-    user[i].doneHddSysReqInSecond = 0;
-    user[i].doneSsdUserReqInSecond = 0;
-    user[i].doneHddUserReqInSecond = 0;
-    user[i].userSsdReqResTimeInSecond = 0.0;
-    user[i].userHddReqResTimeInSecond = 0.0;
-    user[i].sysSsdReqResTimeInSecond = 0.0;
-    user[i].sysHddReqResTimeInSecond = 0.0;
-  }
-}
-
-/*[每隔period就會記錄詳細資訊]*/
-void period_record_statistics(systemInfo *sysInfo, userInfo *user, double systemTime) {
-  if(sysInfo != NULL) {
-    
-    fprintf(periodStatisticRecord, "\n-----------------------------\n");
-    fprintf(periodStatisticRecord, "CPFF system time: %f\n", systemTime);
-    fprintf(periodStatisticRecord, "\nSystem Info\n");
-    fprintf(periodStatisticRecord, "All user requests in period, Read: %lu, Write: %lu\n", sysInfo->userReadReqInPeriod, sysInfo->userWriteReqInPeriod);
-    fprintf(periodStatisticRecord, "All system requests in period, SSD Read: %lu, SSD Write: %lu, HDD Write: %lu\n", sysInfo->sysSsdReadReqInPeriod, sysInfo->sysSsdWriteReqInPeriod, sysInfo->sysHddWriteReqInPeriod);
-    fprintf(periodStatisticRecord, "All evictCountInPeriod: %lu, dirtyCountInPeriod: %lu, hitCountInPeriod: %lu, missCountInPeriod: %lu\n", sysInfo->evictCountInPeriod, sysInfo->dirtyCountInPeriod, sysInfo->hitCountInPeriod, sysInfo->missCountInPeriod);
-    fprintf(periodStatisticRecord, "All doneSsdSysReqInPeriod: %lu, doneHddSysReqInPeriod: %lu, doneSsdUserReqInPeriod: %lu, doneHddUserReqInPeriod: %lu\n", sysInfo->doneSsdSysReqInPeriod, sysInfo->doneHddSysReqInPeriod, sysInfo->doneSsdUserReqInPeriod, sysInfo->doneHddUserReqInPeriod);
-    fprintf(periodStatisticRecord, "All sysSsdReqResTimeInPeriod: %f, sysHddReqResTimeInPeriod: %f, userSsdReqResTimeInPeriod: %f, userHddReqResTimeInPeriod: %f\n", sysInfo->sysSsdReqResTimeInPeriod, sysInfo->sysHddReqResTimeInPeriod, sysInfo->userSsdReqResTimeInPeriod, sysInfo->userHddReqResTimeInPeriod);
-    
-    int i;
-    for(i = 0; i < NUM_OF_USER; i++) {
-      fprintf(periodStatisticRecord, "\nUser %d\n", i+1);
-      fprintf(periodStatisticRecord, "user requests in period, Read: %lu, Write: %lu\n", user[i].userReadReqInPeriod, user[i].userWriteReqInPeriod);
-      fprintf(periodStatisticRecord, "system requests in period, SSD Read: %lu, SSD Write: %lu, HDD Write: %lu\n", user[i].sysSsdReadReqInPeriod, user[i].sysSsdWriteReqInPeriod, user[i].sysHddWriteReqInPeriod);
-      fprintf(periodStatisticRecord, "evictCountInPeriod: %lu, dirtyCountInPeriod: %lu, hitCountInPeriod: %lu, missCountInPeriod: %lu\n", user[i].evictCountInPeriod, user[i].dirtyCountInPeriod, user[i].hitCountInPeriod, user[i].missCountInPeriod);
-      fprintf(periodStatisticRecord, "doneSsdSysReqInPeriod: %lu, doneHddSysReqInPeriod: %lu, doneSsdUserReqInPeriod: %lu, doneHddUserReqInPeriod: %lu\n", user[i].doneSsdSysReqInPeriod, user[i].doneHddSysReqInPeriod, user[i].doneSsdUserReqInPeriod, user[i].doneHddUserReqInPeriod);
-      fprintf(periodStatisticRecord, "sysSsdReqResTimeInPeriod: %f, sysHddReqResTimeInPeriod: %f, userSsdReqResTimeInPeriod: %f, userHddReqResTimeInPeriod: %f\n", user[i].sysSsdReqResTimeInPeriod, user[i].sysHddReqResTimeInPeriod, user[i].userSsdReqResTimeInPeriod, user[i].userHddReqResTimeInPeriod);
-    }
-
-    fprintf(periodStatisticRecord, "-----------------------------\n");
-    
-    return;
-  }
-}
-
-void final_result_statistics(systemInfo *sysInfo, userInfo *user) {
-  if(sysInfo != NULL) {
-    
-    fprintf(finalResult, "\n-----------------------------\n");
-    fprintf(finalResult, "\nSystem Info\n");
-    fprintf(finalResult, "All user requests in period, Read: %lu, Write: %lu\n", sysInfo->userReadReq, sysInfo->userWriteReq);
-    fprintf(finalResult, "All system requests in period, SSD Read: %lu, SSD Write: %lu, HDD Write: %lu\n", sysInfo->sysSsdReadReq, sysInfo->sysSsdWriteReq, sysInfo->sysHddWriteReq);
-    fprintf(finalResult, "All evictCount: %lu, dirtyCount: %lu, hitCount: %lu, missCount: %lu\n", sysInfo->evictCount, sysInfo->dirtyCount, sysInfo->hitCount, sysInfo->missCount);
-    fprintf(finalResult, "All doneSsdSysReq: %lu, doneHddSysReq: %lu, doneSsdUserReq: %lu, doneHddUserReq: %lu\n", sysInfo->doneSsdSysReq, sysInfo->doneHddSysReq, sysInfo->doneSsdUserReq, sysInfo->doneHddUserReq);
-    fprintf(finalResult, "All sysSsdReqResTime: %f, sysHddReqResTime: %f, userSsdReqResTime: %f, userHddReqResTime: %f\n", sysInfo->sysSsdReqResTime, sysInfo->sysHddReqResTime, sysInfo->userSsdReqResTime, sysInfo->userHddReqResTime);
-    
-    int i;
-    for(i = 0; i < NUM_OF_USER; i++) {
-      fprintf(finalResult, "\nUser %d\n", i+1);
-      fprintf(finalResult, "user requests in period, Read: %lu, Write: %lu\n", user[i].userReadReq, user[i].userWriteReq);
-      fprintf(finalResult, "system requests in period, SSD Read: %lu, SSD Write: %lu, HDD Write: %lu\n", user[i].sysSsdReadReq, user[i].sysSsdWriteReq, user[i].sysHddWriteReq);
-      fprintf(finalResult, "evictCount: %lu, dirtyCount: %lu, hitCount: %lu, missCount: %lu\n", user[i].evictCount, user[i].dirtyCount, user[i].hitCount, user[i].missCount);
-      fprintf(finalResult, "doneSsdSysReq: %lu, doneHddSysReq: %lu, doneSsdUserReq: %lu, doneHddUserReq: %lu\n", user[i].doneSsdSysReq, user[i].doneHddSysReq, user[i].doneSsdUserReq, user[i].doneHddUserReq);
-      fprintf(finalResult, "sysSsdReqResTime: %f, sysHddReqResTime: %f, userSsdReqResTime: %f, userHddReqResTime: %f\n", user[i].sysSsdReqResTime, user[i].sysHddReqResTime, user[i].userSsdReqResTime, user[i].userHddReqResTime);
-    }
-
-    fprintf(finalResult, "-----------------------------\n");
-    
-    return;
-  }
-}
-
-/*[每隔period寫成csv紀錄檔(systemtime, SSD throughput, HDD throughput, SSD avg response time, HDD avg response time, hit rate)]*/
-void period_csv_statistics(systemInfo *sysInfo, userInfo *user, double systemTime) {
-  if(sysInfo != NULL) {
-    
-    double ssdAvgResponse, hddAvgResponse, ssdThroughput, hddThroughput, hitRate;
-    ssdThroughput = ((double)sysInfo->doneSsdUserReqInPeriod * 4.0 / 1024.0) / ((double)STAT_FOR_TIME_PERIODS * TIME_PERIOD / 1000.0);
-    hddThroughput = ((double)sysInfo->doneHddUserReqInPeriod * 4.0 / 1024.0) / ((double)STAT_FOR_TIME_PERIODS * TIME_PERIOD / 1000.0);
-    ssdAvgResponse = sysInfo->userSsdReqResTimeInPeriod / (double)sysInfo->doneSsdUserReqInPeriod;
-    hddAvgResponse = sysInfo->userHddReqResTimeInPeriod / (double)sysInfo->doneHddUserReqInPeriod;
-    hitRate = (double)sysInfo->hitCountInPeriod / ((double)sysInfo->hitCountInPeriod + (double)sysInfo->missCountInPeriod);
-    fprintf(systemPeriodRecord, "%f,%f,%f,%f,%f,%f\n", systemTime, ssdThroughput, hddThroughput, ssdAvgResponse, hddAvgResponse, hitRate);
-    
-    int i;
-    for(i = 0; i < NUM_OF_USER; i++) {
-      ssdThroughput = ((double)user[i].doneSsdUserReqInPeriod * 4.0 / 1024.0) / ((double)STAT_FOR_TIME_PERIODS * TIME_PERIOD / 1000.0);
-      hddThroughput = ((double)user[i].doneHddUserReqInPeriod * 4.0 / 1024.0) / ((double)STAT_FOR_TIME_PERIODS * TIME_PERIOD / 1000.0);
-      ssdAvgResponse = user[i].userSsdReqResTimeInPeriod / (double)user[i].doneSsdUserReqInPeriod;
-      hddAvgResponse = user[i].userHddReqResTimeInPeriod / (double)user[i].doneHddUserReqInPeriod;
-      hitRate = (double)user[i].hitCountInPeriod / ((double)user[i].hitCountInPeriod + (double)user[i].missCountInPeriod);
-      fprintf(eachUserPeriodRecord[i], "%f,%f,%f,%f,%f,%f\n", systemTime, ssdThroughput, hddThroughput, ssdAvgResponse, hddAvgResponse, hitRate);
-    }
-    return;
-  }
-}
-
-/*[This function is used to reset periods value every period]*/
-void reset_period_value(systemInfo *sysInfo, userInfo *user) {
-  /*Reset system's period value*/
-  sysInfo->userReadReqInPeriod = 0;
-  sysInfo->userWriteReqInPeriod = 0;
-  sysInfo->sysSsdReadReqInPeriod = 0;
-  sysInfo->sysSsdWriteReqInPeriod = 0;
-  sysInfo->sysHddWriteReqInPeriod = 0;
-  sysInfo->evictCountInPeriod = 0;
-  sysInfo->dirtyCountInPeriod = 0;
-  sysInfo->hitCountInPeriod = 0;
-  sysInfo->missCountInPeriod = 0;
-  sysInfo->doneSsdSysReqInPeriod = 0;
-  sysInfo->doneHddSysReqInPeriod = 0;
-  sysInfo->doneSsdUserReqInPeriod = 0;
-  sysInfo->doneHddUserReqInPeriod = 0;
-  sysInfo->userSsdReqResTimeInPeriod = 0.0;
-  sysInfo->userHddReqResTimeInPeriod = 0.0;
-  sysInfo->sysSsdReqResTimeInPeriod = 0.0;
-  sysInfo->sysHddReqResTimeInPeriod = 0.0;
-
-  /*Reset each user's period value*/
-  int i;
-  for(i = 0; i < NUM_OF_USER; i++) {
-    user[i].userReadReqInPeriod = 0;
-    user[i].userWriteReqInPeriod = 0;
-    user[i].sysSsdReadReqInPeriod = 0;
-    user[i].sysSsdWriteReqInPeriod = 0;
-    user[i].sysHddWriteReqInPeriod = 0;
-    user[i].evictCountInPeriod = 0;
-    user[i].dirtyCountInPeriod = 0;
-    user[i].hitCountInPeriod = 0;
-    user[i].missCountInPeriod = 0;
-    user[i].doneSsdSysReqInPeriod = 0;
-    user[i].doneHddSysReqInPeriod = 0;
-    user[i].doneSsdUserReqInPeriod = 0;
-    user[i].doneHddUserReqInPeriod = 0;
-    user[i].userSsdReqResTimeInPeriod = 0.0;
-    user[i].userHddReqResTimeInPeriod = 0.0;
-    user[i].sysSsdReqResTimeInPeriod = 0.0;
-    user[i].sysHddReqResTimeInPeriod = 0.0;
-  }
-}
-
 int main(int argc, char *argv[]) {
 
   //Check arguments
@@ -778,7 +524,7 @@ int main(int argc, char *argv[]) {
   if((finalResult = fopen("./cpff_statistics_dir/Final_Statistic_Record.txt", "w")) == NULL) {
     print_error(-1, "Can't open the cpff_statistics_dir/Final_Statistic_Record.txt file");
   }
-  final_result_statistics(&sysInfo, user);
+  final_result_statistics(&sysInfo, user, &finalResult);
 
   /*Remove Disksim(SSD and HDD simulators)*/
   rm_disksim();

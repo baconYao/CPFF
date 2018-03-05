@@ -28,6 +28,7 @@
 
 #include "cpff_ipc.h"
 #include "cpff_debug.h"
+#include "cpff_statistic.h"
 
 
 void init_disksim();
@@ -35,10 +36,3 @@ void rm_disksim();
 void initialize(char *par[]);
 void execute_CPFF_framework();
 double shift_cpffSystemTime(double ssdReqCompleteTime, double hddReqCompleteTime);
-// void statistics_done_func(REQ *r, char *reqType);
-void period_record_statistics(systemInfo *sysInfo, userInfo *user, double systemTime);
-void period_csv_statistics(systemInfo *sysInfo, userInfo *user, double systemTime);
-void second_record_statistics(systemInfo *sysInfo, userInfo *user, double systemTime);
-void second_csv_statistics(systemInfo *sysInfo, userInfo *user, double systemTime);
-void reset_second_value(systemInfo *sysInfo, userInfo *user);
-void final_result_statistics(systemInfo *sysInfo, userInfo *user);

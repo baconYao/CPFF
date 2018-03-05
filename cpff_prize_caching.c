@@ -321,13 +321,13 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, system
     /*cache Hit: Page found in cache*/
     if(cache != NULL) {
       //statistics
-      sysInfo->hitCount++;
-      sysInfo->hitCountInSecond++;
-      sysInfo->hitCountInPeriod++;
+      // sysInfo->hitCount++;
+      // sysInfo->hitCountInSecond++;
+      // sysInfo->hitCountInPeriod++;
       pcst.hitCount++;
-      user[tmp->userno-1].hitCount++;
-      user[tmp->userno-1].hitCountInSecond++;
-      user[tmp->userno-1].hitCountInPeriod++;
+      // user[tmp->userno-1].hitCount++;
+      // user[tmp->userno-1].hitCountInSecond++;
+      // user[tmp->userno-1].hitCountInPeriod++;
   
       /*Add new one or update metadata(prize)*/ 
       METABLOCK *meta;
@@ -363,13 +363,13 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, system
 
     } else {   /*cache Miss: Page not found in cache*/  
       //Statistics
-      sysInfo->missCount++;
-      sysInfo->missCountInSecond++;
-      sysInfo->missCountInPeriod++;
+      // sysInfo->missCount++;
+      // sysInfo->missCountInSecond++;
+      // sysInfo->missCountInPeriod++;
       pcst.missCount++;
-      user[tmp->userno-1].missCount++;
-      user[tmp->userno-1].missCountInSecond++;
-      user[tmp->userno-1].missCountInPeriod++;
+      // user[tmp->userno-1].missCount++;
+      // user[tmp->userno-1].missCountInSecond++;
+      // user[tmp->userno-1].missCountInPeriod++;
 
       /*New or update metadata(prize)*/ 
       METABLOCK *meta;
@@ -498,7 +498,7 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, system
               copy_req(tmp, r2);
               r1->diskBlkno = ssd_page_to_sim_sector(evict->pageno);  //轉換成SSD對應大小的diskBlkno
               r1->reqFlag = DISKSIM_READ;
-              r1->isSystemRequest = 1;
+              r1->isSystemRequest = 2;
               r2->diskBlkno = evict->diskBlkno;
               r2->reqFlag = DISKSIM_WRITE;
               r2->isSystemRequest = 1;
@@ -520,9 +520,9 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, system
               sysInfo->totalSysReq += 2;    //for sys read ssd and sys write hdd
               sysInfo->sysSsdReadReq++;    //for sys read ssd
               sysInfo->sysHddWriteReq++;    //for sys write hdd
-              sysInfo->dirtyCount++;
-              sysInfo->dirtyCountInSecond++;
-              sysInfo->dirtyCountInPeriod++;
+              // sysInfo->dirtyCount++;
+              // sysInfo->dirtyCountInSecond++;
+              // sysInfo->dirtyCountInPeriod++;
               sysInfo->sysSsdReadReqInSecond++;    //for sys read ssd
               sysInfo->sysSsdReadReqInPeriod++;    //for sys read ssd
               sysInfo->sysHddWriteReqInSecond++;    //for sys write hdd
@@ -544,22 +544,22 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, system
               user[tmp->userno-1].sysSsdReadReqInPeriod++;    //for sys read ssd
               user[tmp->userno-1].sysHddWriteReqInSecond++;    //for sys write hdd
               user[tmp->userno-1].sysHddWriteReqInPeriod++;    //for sys write hdd
-              user[tmp->userno-1].dirtyCount++;
-              user[tmp->userno-1].dirtyCountInSecond++;
-              user[tmp->userno-1].dirtyCountInPeriod++;
+              // user[tmp->userno-1].dirtyCount++;
+              // user[tmp->userno-1].dirtyCountInSecond++;
+              // user[tmp->userno-1].dirtyCountInPeriod++;
 
               //Release request variable
               free(r1);
               free(r2);
             }
             //Statistics
-            sysInfo->evictCount++;
-            sysInfo->evictCountInSecond++;
-            sysInfo->evictCountInPeriod++;
+            // sysInfo->evictCount++;
+            // sysInfo->evictCountInSecond++;
+            // sysInfo->evictCountInPeriod++;
             pcst.evictCount++;
-            user[tmp->userno-1].evictCount++;
-            user[tmp->userno-1].evictCountInSecond++;
-            user[tmp->userno-1].evictCountInPeriod++;
+            // user[tmp->userno-1].evictCount++;
+            // user[tmp->userno-1].evictCountInSecond++;
+            // user[tmp->userno-1].evictCountInPeriod++;
             
 
             //Caching
