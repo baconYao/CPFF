@@ -26,7 +26,7 @@ fi
 #traceU2_3=''
 #traceU2_4=''
 
-trace='[u2w1w1]Iozone+sql_t200000'
+trace='[u2w1w4]WebSearch1+2_t2000000_new'
 
 #echo "# Only one user"
 #./yusim "./../../yusim_trace/${traceU1}.yt" $ssd_parv $ssdout $hdd_parv $hddout "./output/${traceU1}_${cache}_weighted.stat" "./output/${traceU1}_${cache}_weighted.result"

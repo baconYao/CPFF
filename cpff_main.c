@@ -120,6 +120,8 @@ void initialize(char *par[]) {
   #elif defined DYNAMIC_CREDIT
     printf(COLOR_RB"Credit Policy: DYNAMIC_CREDIT\n"COLOR_RESET);
     fprintf(param, "Credit Policy: DYNAMIC_CREDIT\n");
+    fprintf(param, "Warm up time: %d\n", SSD_WARM_UP_TIME);
+    fprintf(param, "Adjust period: %d\n", STAT_FOR_TIME_PERIODS);
   #endif
 
   fprintf(param, "Cache Space: %d pages\n", SSD_CACHING_SPACE_BY_PAGES);
@@ -264,7 +266,9 @@ void initialize(char *par[]) {
     fprintf(param, "User %d's weight: %u\n", i+1, weight);      //Record user weight into param file
     user[i].globalWeight = weight;
     user[i].ssdCredit = 0.0;
+    user[i].adjustSsdCredit = 0.0;
     user[i].hddCredit = 0.0;
+    user[i].adjustHddCredit = 0.0;
     user[i].ssdQueue = build_user_queue(i+1, "SSD");    //建立user ssd queue
     user[i].hddQueue = build_user_queue(i+1, "HDD");    //建立user hdd queue
     user[i].totalReq = 0;
@@ -408,6 +412,12 @@ void execute_CPFF_framework() {
     
     /*每TIME_PERIOD(1000ms)，重新補充credit*/
     if(cpffSystemTime == nextReplenishCreditTime) {
+
+      /*補充credit*/
+      if(credit_replenish(user, totalWeight, cpffSystemTime) != 0) {
+        print_error(-1, "Can't replenish user credit!");
+      }
+
       /*每隔STAT_FOR_TIME_PERIODS * cpffSystemTime記錄一次*/
       if((int)cpffSystemTime % (STAT_FOR_TIME_PERIODS * 1000) == 0) {
         period_record_statistics(&sysInfo, user, cpffSystemTime, &periodStatisticRecord);
@@ -419,10 +429,7 @@ void execute_CPFF_framework() {
       second_csv_statistics(&sysInfo, user, cpffSystemTime, &systemSecondRecord, &eachUserSecondRecord);
       reset_second_value(&sysInfo, user);
 
-      /*補充credit*/
-      if(credit_replenish(user, totalWeight) != 0) {
-        print_error(-1, "Can't replenish user credit!");
-      }
+      
       nextReplenishCreditTime += TIME_PERIOD;   //推進下次補充credit的時間 (+1000ms)
     }
   }

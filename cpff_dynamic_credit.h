@@ -1,5 +1,5 @@
-#ifndef CPFF_STATIC_CREDIT_H
-#define CPFF_STATIC_CREDIT_H
+#ifndef CPFF_DYNAMIC_CREDIT_H
+#define CPFF_DYNAMIC_CREDIT_H
 
   #include <stdio.h>
   #include <stdlib.h>
@@ -25,6 +25,10 @@
 	double ssd_credit_scheduler(systemInfo *sys, userInfo *user, double systemTime, int *ssdCandidate);
 	/*hdd credit-based scheduler*/
 	double hdd_credit_scheduler(systemInfo *sys, userInfo *user, double systemTime, int *hddCandidate);
+  /*調整ssd credit分配*/
+  void ssd_credit_adjust(userInfo *user);
+  /*調整hdd credit分配*/
+  void hdd_credit_adjust(userInfo *user);
 
 	/*印出所有user的credit*/
 	void print_credit(userInfo *user);

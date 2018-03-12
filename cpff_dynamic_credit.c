@@ -1,4 +1,4 @@
-#include "cpff_static_credit.h"
+#include "cpff_dynamic_credit.h"
 
 /**[針對所有Users初始化Credit]
  * @param {userInfo *} user [users' information]
@@ -7,7 +7,7 @@
 int init_credit(userInfo *user, int totalWeight) {
   //Check the sum of user weights 
   if (totalWeight == 0) {
-      print_error(totalWeight, "[static_credit.c]Total User Weight = ");
+      print_error(totalWeight, "[dynamic_credit.c]Error! Total User Weight = ");
       return -1;
   }
   int i;
@@ -25,25 +25,124 @@ int init_credit(userInfo *user, int totalWeight) {
 
 /**
  * [針對所有Users補充Credit]
+ * @param {userInfo *} user [users' information]
  * @return {int} 0/-1 [success/fail]
  */
  int credit_replenish(userInfo *user, int totalWeight, double cpffSystemTime) {
-  //Check the sum of user weights 
+  /*Check the sum of user weights*/
   if (totalWeight == 0) {
-    print_error(totalWeight, "[CREDIT]Error totalWeight = ");
+    print_error(totalWeight, "[dynamic_credit.c]Error! Total User Weight = ");
     return -1;
   }
-  
-  //Replenishment policy: User credit is negative or positive
   int i;
-  for(i = 0; i < NUM_OF_USER; i++) {
-    user[i].ssdCredit = INIT_CREDIT * ((double)user[i].globalWeight/totalWeight);
-    user[i].hddCredit = INIT_CREDIT * ((double)user[i].globalWeight/totalWeight);
+  /*若時間已經過了warm up time*/
+  if((cpffSystemTime > (double)SSD_WARM_UP_TIME*1000.0)) {
+    /*到了調整credit的周期,則調整credit*/
+    if(((int)cpffSystemTime - SSD_WARM_UP_TIME*1000)%(STAT_FOR_TIME_PERIODS*1000) == 0) {
+      // printf(COLOR_BB"\n\nAdjust Time: %f\n"COLOR_RESET, cpffSystemTime);
+      ssd_credit_adjust(user);
+      hdd_credit_adjust(user);
+      
+      for(i = 0; i < NUM_OF_USER; i++) {
+        user[i].ssdCredit = user[i].adjustSsdCredit;
+        user[i].hddCredit = user[i].adjustHddCredit;
+        // printf(COLOR_YB"\nAdjust U%d --> SSD: %f\tHDD: %f\n"COLOR_RESET, i, user[i].ssdCredit, user[i].hddCredit);
+      }
+      
+      return 0;
+    } else if(((int)cpffSystemTime - SSD_WARM_UP_TIME*1000)-(STAT_FOR_TIME_PERIODS*1000) > 0) {        //依照之前調整的credit量補充credit
+      for(i = 0; i < NUM_OF_USER; i++) {
+        user[i].ssdCredit = user[i].adjustSsdCredit;
+        user[i].hddCredit = user[i].adjustHddCredit;
+        // printf(COLOR_GB"\nU%d --> SSD: %f\tHDD: %f\n"COLOR_RESET, i, user[i].ssdCredit, user[i].hddCredit);
+      }
+      return 0;
+    } else {
+      for(i = 0; i < NUM_OF_USER; i++) {      //warm up時間結束，但還不到調整credit的時間段，故此時間的credit和預設ㄧ樣
+        user[i].ssdCredit = INIT_CREDIT * ((double)user[i].globalWeight/totalWeight);
+        user[i].hddCredit = INIT_CREDIT * ((double)user[i].globalWeight/totalWeight);
+        // printf(COLOR_RB"\nSS U%d --> SSD: %f\tHDD: %f\n"COLOR_RESET, i, user[i].ssdCredit, user[i].hddCredit);
+      }
+    }
+  } else {
+    /*在wamr up期間，credit依照weight分配來進行補充*/
+    for(i = 0; i < NUM_OF_USER; i++) {
+      user[i].ssdCredit = INIT_CREDIT * ((double)user[i].globalWeight/totalWeight);
+      user[i].hddCredit = INIT_CREDIT * ((double)user[i].globalWeight/totalWeight);
+    }
   }
-  
   return 0;
 }
 
+/**
+ * [在dynamic credit policy中，每經過一個adjust period，就會調整ssd credit(使用克拉瑪公式解(目前只能解兩位user))]
+ * @param {userInfo *} user [users' information]
+ */
+void ssd_credit_adjust(userInfo *user) {
+  /*若所有user ssd queue內都沒有request，則返回(代表credit的值會和上一輪調整的一樣)*/
+  if(are_all_user_ssd_queue_empty(user)) {      
+    return;
+  }
+
+  /*user1 ssd queue是空的，或是在上一輪沒有任何ssd user request被執行,則保留0.05%的credit給user1*/
+  if(is_empty_queue(user[0].ssdQueue) || user[0].doneSsdUserReqInPeriod == 0) {
+    user[0].adjustSsdCredit = 1000.0 * 0.05;  
+    user[1].adjustSsdCredit = 1000.0 * 0.95; 
+    return; 
+  }
+  /*user2 ssd queue是空的，或是在上一輪沒有任何ssd user request被執行,則保留0.05%的credit給user2*/
+  if(is_empty_queue(user[1].ssdQueue) || user[1].doneSsdUserReqInPeriod == 0) {
+    user[0].adjustSsdCredit = 1000.0 * 0.95;   
+    user[1].adjustSsdCredit = 1000.0 * 0.05;  
+    return;
+  }
+  
+  double det, proprotionU1, proprotionU2, weightProprotionU1, weightProprotionU2;
+  proprotionU1 = (double)user[0].doneSsdUserReqInPeriod / (double)(user[0].doneSsdUserReqInPeriod + user[0].doneSsdSysReqInPeriod);
+  proprotionU2 = (double)user[1].doneSsdUserReqInPeriod / (double)(user[1].doneSsdUserReqInPeriod + user[1].doneSsdSysReqInPeriod);
+  
+  weightProprotionU1 = (double)user[1].globalWeight * proprotionU1;
+  weightProprotionU2 = -(double)user[0].globalWeight * proprotionU2;
+  
+  det = weightProprotionU2 - weightProprotionU1;
+  user[0].adjustSsdCredit = 1000.0 * weightProprotionU2 / det;   //user1調整過後的ssd credit
+  user[1].adjustSsdCredit = -1000.0 * weightProprotionU1 / det;  //user2調整過後的ssd credit
+}
+
+/**
+ * [在dynamic credit policy中，每經過一個adjust period，就會調整hdd credit(使用克拉瑪公式解(目前只能解兩位user))]
+ * @param {userInfo *} user [users' information]
+ */
+void hdd_credit_adjust(userInfo *user) {
+  /*若所有user hdd queue內都沒有request，則返回(代表credit的值會和上一輪調整的一樣)*/
+  if(are_all_user_hdd_queue_empty(user)) {      
+    return;
+  }
+
+  /*user1 hdd queue是空的，或是在上一輪沒有任何hdd user request被執行,則保留0.05%的credit給user1*/
+  if(is_empty_queue(user[0].hddQueue) || user[0].doneHddUserReqInPeriod == 0) {
+    user[0].adjustHddCredit = 1000.0 * 0.05;  
+    user[1].adjustHddCredit = 1000.0 * 0.95; 
+    return; 
+  }
+  /*user2 hdd queue是空的，或是在上一輪沒有任何hdd user request被執行,則保留0.05%的credit給user2*/
+  if(is_empty_queue(user[1].hddQueue) || user[1].doneHddUserReqInPeriod == 0) {
+    user[0].adjustHddCredit = 1000.0 * 0.95;   
+    user[1].adjustHddCredit = 1000.0 * 0.05;  
+    return;
+  }
+
+  double det, proprotionU1, proprotionU2, weightProprotionU1, weightProprotionU2;
+  proprotionU1 = (double)user[0].doneHddUserReqInPeriod / (double)(user[0].doneHddUserReqInPeriod + user[0].doneHddSysReqInPeriod);
+  proprotionU2 = (double)user[1].doneHddUserReqInPeriod / (double)(user[1].doneHddUserReqInPeriod + user[1].doneHddSysReqInPeriod);
+  
+  weightProprotionU1 = (double)user[1].globalWeight * proprotionU1;
+  weightProprotionU2 = -(double)user[0].globalWeight * proprotionU2;
+  
+  det = weightProprotionU2 - weightProprotionU1;
+  user[0].adjustHddCredit = 1000.0 * weightProprotionU2 / det;   //user1調整過後的hdd credit
+  user[1].adjustHddCredit = -1000.0 * weightProprotionU1 / det;  //user2調整過後的hdd credit
+}
 
 /**
  * [預先扣除credit]

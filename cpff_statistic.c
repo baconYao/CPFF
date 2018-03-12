@@ -228,7 +228,7 @@ void second_csv_statistics(systemInfo *sysInfo, userInfo *user, double systemTim
       ssdAvgResponse = user[i].userSsdReqResTimeInSecond / (double)user[i].doneSsdUserReqInSecond;
       hddAvgResponse = user[i].userHddReqResTimeInSecond / (double)user[i].doneHddUserReqInSecond;
       hitRate = (double)user[i].hitCountInSecond / ((double)user[i].hitCountInSecond + (double)user[i].missCountInSecond);
-      fprintf(eachUserSecondRecord[i], "%f,%f,%f,%f,%f,%f\n", systemTime, ssdThroughput, hddThroughput, ssdAvgResponse, hddAvgResponse, hitRate);
+      fprintf(eachUserSecondRecord[i], "%f,%f,%f,%f,%f,%f,%f,%f\n", systemTime, ssdThroughput, hddThroughput, ssdAvgResponse, hddAvgResponse, hitRate, user[i].adjustSsdCredit, user[i].adjustHddCredit);
     }
     return;
   }
@@ -282,7 +282,7 @@ void period_csv_statistics(systemInfo *sysInfo, userInfo *user, double systemTim
       ssdAvgResponse = user[i].userSsdReqResTimeInPeriod / (double)user[i].doneSsdUserReqInPeriod;
       hddAvgResponse = user[i].userHddReqResTimeInPeriod / (double)user[i].doneHddUserReqInPeriod;
       hitRate = (double)user[i].hitCountInPeriod / ((double)user[i].hitCountInPeriod + (double)user[i].missCountInPeriod);
-      fprintf(eachUserPeriodRecord[i], "%f,%f,%f,%f,%f,%f\n", systemTime, ssdThroughput, hddThroughput, ssdAvgResponse, hddAvgResponse, hitRate);
+      fprintf(eachUserPeriodRecord[i], "%f,%f,%f,%f,%f,%f,%f,%f\n", systemTime, ssdThroughput, hddThroughput, ssdAvgResponse, hddAvgResponse, hitRate, user[i].adjustSsdCredit, user[i].adjustHddCredit);
     }
     return;
   }

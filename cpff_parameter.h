@@ -8,8 +8,8 @@
   // #define COMPETITION_CACHING_SPACE
 
   /*選擇Credit管理測略(一次只能選一個)*/
-  #define STATIC_CREDIT
-  // #define DYNAMIC_CREDIT
+  // #define STATIC_CREDIT
+  #define DYNAMIC_CREDIT
 
   /*使用者人數，須根據trace的user去更改*/
   #define NUM_OF_USER 2
@@ -28,7 +28,7 @@
   //#define SSD_BLOCK2SECTOR (SSD_BLOCK_SIZE/DISKSIM_SECTOR)
 
 
-  #define SSD_CACHING_SPACE_BY_PAGES 524288 	// total pages number
+  #define SSD_CACHING_SPACE_BY_PAGES 1048576 	// total pages number
 	//MAX:(8*8*2048*64*8(channels) = 67108864 sectors)(67108864/PAGE2SECTOR = 8388608 pages)
   //Hint: < 6291456 page valid!
   /*
@@ -50,7 +50,8 @@
 	#define SSD_N_ELEMENTS 1 //SSD Channels //No multi channel
 
   #define TIME_PERIOD 1000.0 //ms  //VSSD uses 1000.0
-  #define STAT_FOR_TIME_PERIODS 10 // 每隔幾個TIME_PERIOD記錄一次
+  #define STAT_FOR_TIME_PERIODS 5 // 每隔幾個TIME_PERIOD記錄一次，此值也是dynamic credit的adjust time
+  #define SSD_WARM_UP_TIME STAT_FOR_TIME_PERIODS*2     //定義SSD的warm up時間 (單位:秒)
 
   /*credit*/
   #define INIT_CREDIT (TIME_PERIOD*SSD_N_ELEMENTS)		//The initial credit
