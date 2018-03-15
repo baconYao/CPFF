@@ -11,6 +11,10 @@
   // #define STATIC_CREDIT
   #define DYNAMIC_CREDIT
 
+  /*選系統是否Work conserving(預設為NON_WORK_CONSERVING)*/ 
+  // #define WORK_CONSERVING
+  #define NON_WROK_CONSERVING
+
   /*使用者人數，須根據trace的user去更改*/
   #define NUM_OF_USER 2
 
@@ -50,8 +54,13 @@
 	#define SSD_N_ELEMENTS 1 //SSD Channels //No multi channel
 
   #define TIME_PERIOD 1000.0 //ms  //VSSD uses 1000.0
-  #define STAT_FOR_TIME_PERIODS 5 // 每隔幾個TIME_PERIOD記錄一次，此值也是dynamic credit的adjust time
-  #define SSD_WARM_UP_TIME STAT_FOR_TIME_PERIODS*2     //定義SSD的warm up時間 (單位:秒)
+  #define STAT_FOR_TIME_PERIODS 5 // 每隔幾個TIME_PERIOD記錄一次，此值也是dynamic credit的adjust period
+  
+  /*dynamic credit*/
+  #define SSD_WARM_UP_TIME STAT_FOR_TIME_PERIODS*2     //定義SSD的warm up時間 (單位:秒),請以STAT_FOR_TIME_PERIOD的倍數來選擇
+  // #define DONE_ALPHA 0.7
+  // #define DONE_BETA 0.3
+  #define MINI_CREDIT_PROPORTION 0.02     //若系統是Work conserving時，會參考此值
 
   /*credit*/
   #define INIT_CREDIT (TIME_PERIOD*SSD_N_ELEMENTS)		//The initial credit
@@ -62,7 +71,7 @@
   #define HDD_WRITE_SEEK_TIME 4.9                // unit: ms
   #define HDD_ROTATIONAL_LATENCY_TIME 3         // unit: ms
   #define HDD_TRANSFER_TIME 0.054253            // unit: ms,在此計算的是transfer 一個4KB的HDD request所需的時間
-  /*ssd credit pre charge*/ 
+  /*hdd credit pre charge*/ 
   #define HDD_READ_PRE_CHAREG_VALUE HDD_READ_SEEK_TIME
   #define HDD_WRITE_PRE_CHAREG_VALUE HDD_WRITE_SEEK_TIME
 

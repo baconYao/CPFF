@@ -124,6 +124,14 @@ void initialize(char *par[]) {
     fprintf(param, "Adjust period: %d\n", STAT_FOR_TIME_PERIODS);
   #endif
 
+  #ifdef NON_WROK_CONSERVING
+    printf(COLOR_RB"NON_WROK_CONSERVING\n"COLOR_RESET);
+    fprintf(param, "NON_WROK_CONSERVING\n");
+  #elif defined WORK_CONSERVING
+    printf(COLOR_RB"WORK_CONSERVING\n"COLOR_RESET);
+    fprintf(param, "WORK_CONSERVING\n");
+  #endif
+
   fprintf(param, "Cache Space: %d pages\n", SSD_CACHING_SPACE_BY_PAGES);
   
   /*初始化 HDDsim & SSDsim*/

@@ -84,19 +84,42 @@ void ssd_credit_adjust(userInfo *user) {
     return;
   }
 
-  /*user1 ssd queue是空的，或是在上一輪沒有任何ssd user request被執行,則保留0.05%的credit給user1*/
-  if(is_empty_queue(user[0].ssdQueue) || user[0].doneSsdUserReqInPeriod == 0) {
-    user[0].adjustSsdCredit = 1000.0 * 0.05;  
-    user[1].adjustSsdCredit = 1000.0 * 0.95; 
+  /*user1沒有做任何ssd request(user or system request)，且user1 ssd queue內也沒有任何request，代表此user1很有可能已經做完所有request*/
+  if(user[0].doneSsdUserReqInPeriod == 0 && user[0].doneSsdSysReqInPeriod == 0 && is_empty_queue(user[0].ssdQueue)) {
+    user[0].adjustSsdCredit = 1000.0 * MINI_CREDIT_PROPORTION;  
+    user[1].adjustSsdCredit = 1000.0 * (1.0 - MINI_CREDIT_PROPORTION); 
     return; 
   }
-  /*user2 ssd queue是空的，或是在上一輪沒有任何ssd user request被執行,則保留0.05%的credit給user2*/
-  if(is_empty_queue(user[1].ssdQueue) || user[1].doneSsdUserReqInPeriod == 0) {
-    user[0].adjustSsdCredit = 1000.0 * 0.95;   
-    user[1].adjustSsdCredit = 1000.0 * 0.05;  
-    return;
+
+  /*user2沒有做任何ssd request(user or system request)，且user2 ssd queue內也沒有任何request，代表此user2很有可能已經做完所有request*/
+  if(user[1].doneSsdUserReqInPeriod == 0 && user[1].doneSsdSysReqInPeriod == 0 && is_empty_queue(user[1].ssdQueue)) {
+    user[0].adjustSsdCredit = 1000.0 * (1.0 - MINI_CREDIT_PROPORTION);   
+    user[1].adjustSsdCredit = 1000.0 * MINI_CREDIT_PROPORTION;  
+    return; 
+  }
+
+  /*user1 在上一輪沒有任何ssd user request被執行,則保留MINI_CREDIT_PROPORTION的credit給user1*/
+  if(user[0].doneSsdUserReqInPeriod == 0) {
+    #ifdef NON_WROK_CONSERVING
+      return;       //依照上一輪分配，不調整ssd credit
+    #elif defined WORK_CONSERVING
+      user[0].adjustSsdCredit = 1000.0 * (MINI_CREDIT_PROPORTION + 0.03);  
+      user[1].adjustSsdCredit = 1000.0 * (1.0 - (MINI_CREDIT_PROPORTION + 0.03)); 
+      return; 
+    #endif
+  }
+  /*user2 在上一輪沒有任何ssd user request被執行,則保留MINI_CREDIT_PROPORTION的credit給user2*/
+  if(user[1].doneSsdUserReqInPeriod == 0) {
+    #ifdef NON_WROK_CONSERVING
+      return;       //依照上一輪分配，不調整ssd credit
+    #elif defined WORK_CONSERVING 
+      user[0].adjustSsdCredit = 1000.0 * (1.0 - (MINI_CREDIT_PROPORTION + 0.03));   
+      user[1].adjustSsdCredit = 1000.0 * (MINI_CREDIT_PROPORTION + 0.03);  
+      return;
+    #endif
   }
   
+  /*開始調整SSD credit*/
   double det, proprotionU1, proprotionU2, weightProprotionU1, weightProprotionU2;
   proprotionU1 = (double)user[0].doneSsdUserReqInPeriod / (double)(user[0].doneSsdUserReqInPeriod + user[0].doneSsdSysReqInPeriod);
   proprotionU2 = (double)user[1].doneSsdUserReqInPeriod / (double)(user[1].doneSsdUserReqInPeriod + user[1].doneSsdSysReqInPeriod);
@@ -118,20 +141,42 @@ void hdd_credit_adjust(userInfo *user) {
   if(are_all_user_hdd_queue_empty(user)) {      
     return;
   }
-
-  /*user1 hdd queue是空的，或是在上一輪沒有任何hdd user request被執行,則保留0.05%的credit給user1*/
-  if(is_empty_queue(user[0].hddQueue) || user[0].doneHddUserReqInPeriod == 0) {
-    user[0].adjustHddCredit = 1000.0 * 0.05;  
-    user[1].adjustHddCredit = 1000.0 * 0.95; 
+  /*user1沒有做任何hdd request(user or system request)，且user1 hdd queue內也沒有任何request，代表此user1很有可能已經做完所有request*/
+  if(user[0].doneHddUserReqInPeriod == 0 && user[0].doneHddSysReqInPeriod == 0 && is_empty_queue(user[0].hddQueue)) {
+    user[0].adjustHddCredit = 1000.0 * MINI_CREDIT_PROPORTION;  
+    user[1].adjustHddCredit = 1000.0 * (1.0 - MINI_CREDIT_PROPORTION); 
     return; 
   }
-  /*user2 hdd queue是空的，或是在上一輪沒有任何hdd user request被執行,則保留0.05%的credit給user2*/
-  if(is_empty_queue(user[1].hddQueue) || user[1].doneHddUserReqInPeriod == 0) {
-    user[0].adjustHddCredit = 1000.0 * 0.95;   
-    user[1].adjustHddCredit = 1000.0 * 0.05;  
-    return;
+
+  /*user2沒有做任何hdd request(user or system request)，且user2 hdd queue內也沒有任何request，代表此user2很有可能已經做完所有request*/
+  if(user[1].doneHddUserReqInPeriod == 0 && user[1].doneHddSysReqInPeriod == 0 && is_empty_queue(user[1].hddQueue)) {
+    user[0].adjustHddCredit = 1000.0 * (1.0 - MINI_CREDIT_PROPORTION);   
+    user[1].adjustHddCredit = 1000.0 * MINI_CREDIT_PROPORTION;  
+    return; 
   }
 
+  /*user1 在上一輪沒有任何hdd user request被執行,則保留MINI_CREDIT_PROPORTION的credit給user1*/
+  if(user[0].doneHddUserReqInPeriod == 0) {
+    #ifdef NON_WROK_CONSERVING
+      return;       //依照上一輪分配，不調整hdd credit
+    #elif defined WORK_CONSERVING
+      user[0].adjustHddCredit = 1000.0 * (MINI_CREDIT_PROPORTION + 0.03);  
+      user[1].adjustHddCredit = 1000.0 * (1.0 - (MINI_CREDIT_PROPORTION + 0.03)); 
+      return; 
+    #endif
+  }
+  /*user2 在上一輪沒有任何hdd user request被執行,則保留MINI_CREDIT_PROPORTION的credit給user2*/
+  if(user[1].doneHddUserReqInPeriod == 0) {
+    #ifdef NON_WROK_CONSERVING
+      return;       //依照上一輪分配，不調整hdd credit
+    #elif defined WORK_CONSERVING 
+      user[0].adjustHddCredit = 1000.0 * (1.0 - (MINI_CREDIT_PROPORTION + 0.03));   
+      user[1].adjustHddCredit = 1000.0 * (MINI_CREDIT_PROPORTION + 0.03);  
+      return;
+    #endif
+  }
+  
+  /*開始調整HDD credit*/
   double det, proprotionU1, proprotionU2, weightProprotionU1, weightProprotionU2;
   proprotionU1 = (double)user[0].doneHddUserReqInPeriod / (double)(user[0].doneHddUserReqInPeriod + user[0].doneHddSysReqInPeriod);
   proprotionU2 = (double)user[1].doneHddUserReqInPeriod / (double)(user[1].doneHddUserReqInPeriod + user[1].doneHddSysReqInPeriod);
