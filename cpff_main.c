@@ -389,22 +389,31 @@ void execute_CPFF_framework() {
   double hddReqCompleteTime = hostQueue->head->r.arrivalTime;      //表示被送進HDD sim 的HDD request在系統時間(cpffSystemTime)的甚麼時候做完。 (hddReqCompleteTime = request servie time + cpffSystemTime)
   cpffSystemTime = hostQueue->head->r.arrivalTime;
   while(1) {
+    // printf("\n");
+    // print_credit(user);
     double ssdServiceTime ,hddServiceTime;
     print_progress(cpffSystemTime, sysInfo.totalReq, sysInfo.doneSsdSysReq+sysInfo.doneHddSysReq+sysInfo.doneSsdUserReq+sysInfo.doneHddUserReq, hostQueue->size);
     
     /*執行prize caching，根據系統時間(cpffSystemTime)將host queue內的request送至對應的user queue內*/ 
     prize_caching(cpffSystemTime, user, hostQueue, &sysInfo);
   
-    ssdReqCompleteTime = ssd_credit_scheduler(&sysInfo, user, cpffSystemTime, ssdCandidate); 
+    if(ssdReqCompleteTime == cpffSystemTime) {
+      ssdReqCompleteTime = ssd_credit_scheduler(&sysInfo, user, cpffSystemTime, ssdCandidate); 
+    }
     if(ssdReqCompleteTime < cpffSystemTime) {
       ssdReqCompleteTime = cpffSystemTime;
     }
 
-    hddReqCompleteTime = hdd_credit_scheduler(&sysInfo, user, cpffSystemTime, hddCandidate);
+    if(hddReqCompleteTime == cpffSystemTime) {
+      hddReqCompleteTime = hdd_credit_scheduler(&sysInfo, user, cpffSystemTime, hddCandidate);
+    }
     if(hddReqCompleteTime < cpffSystemTime) {
       hddReqCompleteTime = cpffSystemTime;
     }
-
+    // printf("\nssdReqCompleteTime: %f\thddReqCompleteTime: %f\tArr time: %f\n", ssdReqCompleteTime, hddReqCompleteTime, hostQueue->head->r.arrivalTime);
+    // printf("--------------\n\n");    
+    // char c = getchar();
+    
     /*All requests have been done*/
     if(is_empty_queue(hostQueue) && are_all_user_hdd_queue_empty(user) && are_all_user_ssd_queue_empty(user)) {
       /*在system要結束時(cpffSystemTime可能不會剛好是1000ms的倍數)，也必須統計結果*/
@@ -421,16 +430,22 @@ void execute_CPFF_framework() {
     /*每TIME_PERIOD(1000ms)，重新補充credit*/
     if(cpffSystemTime == nextReplenishCreditTime) {
 
+      // print_credit(user);
+      // printf("U1 SSD Q size: %d\t HDD Q siz: %d\n", user[0].ssdQueue->size, user[0].hddQueue->size);
+      // printf("U2 SSD Q size: %d\t HDD Q siz: %d\n\n", user[1].ssdQueue->size, user[1].hddQueue->size);
       /*補充credit*/
       if(credit_replenish(user, totalWeight, cpffSystemTime) != 0) {
         print_error(-1, "Can't replenish user credit!");
       }
+      // print_credit(user);
+      
 
       /*每隔STAT_FOR_TIME_PERIODS * cpffSystemTime記錄一次*/
       if((int)cpffSystemTime % (STAT_FOR_TIME_PERIODS * 1000) == 0) {
         period_record_statistics(&sysInfo, user, cpffSystemTime, &periodStatisticRecord);
         period_csv_statistics(&sysInfo, user, cpffSystemTime, &systemPeriodRecord, &eachUserPeriodRecord);
         reset_period_value(&sysInfo, user);
+        char c = getchar();
       }
       /*每1000ms做的事情*/
       second_record_statistics(&sysInfo, user, cpffSystemTime, &secondStatisticRecord);

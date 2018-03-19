@@ -305,6 +305,7 @@ double ssd_credit_scheduler(systemInfo *sys, userInfo *user, double systemTime, 
   tmp->responseTime = ssdServiceTime;
   credit_compensate(user, ssdServiceTime, tmp, "SSDCredit");   //進行credit的補償
   double ssdReqCompleteTime = ssdServiceTime + systemTime;   //推進下個ssd request可以做的時間
+  // printf("\n\nssd service time: %f\t%f\n", ssdServiceTime, systemTime);
   
   //statistics
   statistics_done_func(sys, user, tmp, "SSD");
@@ -368,6 +369,8 @@ double hdd_credit_scheduler(systemInfo *sys, userInfo *user, double systemTime, 
   tmp->responseTime = hddServiceTime;
   credit_compensate(user, hddServiceTime, tmp, "HDDCredit");     //進行credit的補償
   double hddReqCompleteTime = hddServiceTime + systemTime;   //推進下個hdd device queue 內 request可以做的時間
+  // printf("hdd service time: %f\t%f\n", hddServiceTime, systemTime);
+  
   //statistics
   statistics_done_func(sys, user, tmp, "HDD");
   

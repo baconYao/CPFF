@@ -26,7 +26,7 @@ fi
 #traceU2_3=''
 #traceU2_4=''
 
-trace='[u2w1w2]Financial2+WebSearch1_t2000000'
+trace='tool/Sql+Web1'
 
 #echo "# Only one user"
 #./yusim "./../../yusim_trace/${traceU1}.yt" $ssd_parv $ssdout $hdd_parv $hddout "./output/${traceU1}_${cache}_weighted.stat" "./output/${traceU1}_${cache}_weighted.result"
@@ -48,4 +48,4 @@ echo ""
 
 
 echo "Run cpff......"
-./cpff "trace/${trace}.tr" $ssd_parv $ssdout $hdd_parv $hddout
+./cpff "/home/baconyao/RUN_CPFF/disksim-trace/${trace}.tr" $ssd_parv $ssdout $hdd_parv $hddout
