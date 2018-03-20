@@ -445,7 +445,6 @@ void execute_CPFF_framework() {
         period_record_statistics(&sysInfo, user, cpffSystemTime, &periodStatisticRecord);
         period_csv_statistics(&sysInfo, user, cpffSystemTime, &systemPeriodRecord, &eachUserPeriodRecord);
         reset_period_value(&sysInfo, user);
-        char c = getchar();
       }
       /*每1000ms做的事情*/
       second_record_statistics(&sysInfo, user, cpffSystemTime, &secondStatisticRecord);
