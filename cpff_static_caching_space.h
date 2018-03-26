@@ -58,8 +58,8 @@
 	/*GET CACHE COUNT*/
 	unsigned long get_cache_cnt();
 
-	/*寫檔至 Result File*/
-	void cache_write_result_file(FILE **result, userInfo *user, int totalWeight);
+	/*紀錄每個user每second的cache累積量(單位:page)*/
+	void second_record_cache(FILE **result);
 	
 	/*將SSD Page Number轉成Disksim Block(Sector)*/
 	unsigned long ssd_page_to_sim_sector(unsigned long ssdPageno);

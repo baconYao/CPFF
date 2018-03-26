@@ -243,16 +243,13 @@ unsigned long get_cache_cnt() {
 }
 
 /**
- * [寫檔至 Result File]
+ * [寫檔至 Cache_Period_Record, 紀錄每個user每second的cache累積量(單位:page)]
  * @param {FILE*} st [寫檔Pointer]
  */
-// void cache_write_result_file(FILE **result, userInfo *user) {
-//   unsigned i;
-//   fprintf(*result, "[competition_caching_space.c] Total User Weight:%u, Total Cache Size(Pages):%u\n", totalWeight, SSD_CACHING_SPACE_BY_PAGES);
-//   for (i = 0; i < NUM_OF_USER; i++) {
-//     fprintf(*result, "[competition_caching_space.c] User%u: Weight:%u Start(Pages):%lu, Size(Pages):%lu\n", i+1, user[i].globalWeight, userCacheStart[i], userCacheSize[i]);
-//   }
-// }
+ void second_record_cache(FILE **result) {
+  // printf("\nCache: %lu,%lu\n", userCacheCount[0], userCacheCount[1]);
+  fprintf(*result, "%lu,%lu\n", userCacheCount[0], userCacheCount[1]);
+}
 
 /**
  * [將SSD Page Number轉成Disksim Block(Sector)]
