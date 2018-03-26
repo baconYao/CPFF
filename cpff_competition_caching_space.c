@@ -247,8 +247,8 @@ unsigned long get_cache_cnt() {
  * @param {FILE*} st [寫檔Pointer]
  */
  void second_record_cache(FILE **result) {
-  // printf("\nCache: %lu,%lu\n", userCacheCount[0], userCacheCount[1]);
-  fprintf(*result, "%lu,%lu\n", userCacheCount[0], userCacheCount[1]);
+  // printf("\nCache: %f,%f\n", (double)userCacheCount[0]/(double)(SSD_CACHING_SPACE_BY_PAGES), (double)userCacheCount[1]/(double)(SSD_CACHING_SPACE_BY_PAGES));
+  fprintf(*result, "%f,%f\n", (double)userCacheCount[0]/(double)(SSD_CACHING_SPACE_BY_PAGES), (double)userCacheCount[1]/(double)(SSD_CACHING_SPACE_BY_PAGES));
 }
 
 /**

@@ -45,6 +45,7 @@ int init_user_cache(userInfo *user) {
 
   for (i = 0; i < SSD_CACHING_SPACE_BY_PAGES; i++) {
     ssdCache[i].pageno = i;
+    ssdCache[i].prev = ssdCache[i].next = NULL;
   }
   freePage = 0;       //page
 
@@ -258,11 +259,10 @@ unsigned long get_cache_cnt() {
  * [寫檔至 Cache_Period_Record, 紀錄每個user每second的cache累積量(單位:page)]
  * @param {FILE*} st [寫檔Pointer]
  */
- void second_record_cache(FILE **result) {
+void second_record_cache(FILE **result) {
   // printf("\nCache: %lu,%lu\n", userCacheCount[0], userCacheCount[1]);
-  fprintf(*result, "%lu,%lu\n", userCacheCount[0], userCacheCount[1]);
+  fprintf(*result, "%f,%f\n", (double)userCacheCount[0]/(double)(SSD_CACHING_SPACE_BY_PAGES), (double)userCacheCount[1]/(double)(SSD_CACHING_SPACE_BY_PAGES));
 }
-
 
 /**
  * [將SSD Page Number轉成Disksim Block(Sector)]
