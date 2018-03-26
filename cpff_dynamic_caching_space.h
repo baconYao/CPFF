@@ -8,7 +8,7 @@
 #include "cpff_prize_caching.h"
 
 	/*STRUCTURE DEFINITION: SSD CACHE*/
-	typedef struct SSD_cache {
+	typedef struct SSD_CACHE {
 		unsigned long pageno;		//(In cache)SSD Page Number
 		unsigned long diskBlkno;	//(In disk) HDD Block Number//Block編號(根據Disksim格式)
 		int dirtyFlag;				//標記是否為Dirty page
@@ -16,7 +16,24 @@
 		unsigned user;				//User Number for multi users
 		double accessTime;			//Cache的存取時間
 		struct metaBlock *pcMeta;			//連結PC的Metadata
+		struct SSD_CACHE *prev;
+		struct SSD_CACHE *next;
 	} SSD_CACHE;
+
+	/* 定義cache的struct */
+	typedef struct CACHE_LIST {
+		unsigned long int size;       //= userCacheCount，和userFreeCount[NUM_OF_USER]總和 = CACHE_SIZE
+		SSD_CACHE *head;
+		SSD_CACHE *tail;
+	} CACHE_LIST;
+
+	/* 宣告user cache list */
+	static CACHE_LIST cache_list[NUM_OF_USER];
+
+	/* 宣告exchange cache list */
+	static CACHE_LIST exchange_list;
+
+	static unsigned long freePage;
 
   /*
    *SSD CACHE TABLE
@@ -24,11 +41,8 @@
    */
 	static SSD_CACHE ssdCache[SSD_CACHING_SPACE_BY_PAGES];
 
-	/*****With ssd logical partition*****/
-
 	/*USER SSD CACHE LOGICAL PARTITION*/
-	static unsigned long userCacheStart[NUM_OF_USER];
-	static unsigned long userCacheSize[NUM_OF_USER];
+	static unsigned long userCacheSize[NUM_OF_USER];		// = userFreeCount + userCacheCount
 
 	/*USER FREE CACHE COUNT*/
 	static unsigned long userFreeCount[NUM_OF_USER];

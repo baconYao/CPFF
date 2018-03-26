@@ -19,34 +19,34 @@ int init_user_cache(userInfo *user) {
   }
 
   if (totalWeight == 0){
-    print_error(0, "[USER CACHE] Total User Weight = ");
+    print_error(0, "[dynamic_caching_space.c] Total User Weight = ");
   }
 
   #ifdef CPFF_DYNAMIC_CACHING_SPACE
-    unsigned long startPage = 0;
     for (i = 0; i < NUM_OF_USER; i++) {
-      userCacheStart[i] = startPage;
+      userCacheCount[i] = 0;
+      cache_list[i].size = 0;
+      cache_list[i].head = cache_list[i].tail = NULL;
       userCacheSize[i] = user[i].globalWeight*SSD_CACHING_SPACE_BY_PAGES/totalWeight;
       userFreeCount[i] = userCacheSize[i];
-      startPage += userCacheSize[i];
     }
-      
-    printf(COLOR_GB" [USER CACHE] Total User Weight:%u, Total Cache Size(Pages):%u\n"COLOR_RESET, totalWeight, SSD_CACHING_SPACE_BY_PAGES);
+
+    exchange_list[i].size = 0;
+    exchange_list[i].head = exchange_list[i].tail = NULL;
+
+    printf(COLOR_GB" [dynamic_caching_space.c] Total User Weight:%u, Total Cache Size(Pages):%u\n"COLOR_RESET, totalWeight, SSD_CACHING_SPACE_BY_PAGES);
 
     for (i = 0; i < NUM_OF_USER; i++) {
-      printf(COLOR_GB" [USER CACHE] User%u: Weight:%u Start(Pages):%lu, Size(Pages):%lu\n"COLOR_RESET, i+1, user[i].globalWeight, userCacheStart[i], userCacheSize[i]);
+      printf(COLOR_GB" [dynamic_caching_space.c] User%u: Weight:%u , Size(Pages):%lu\n"COLOR_RESET, i+1, user[i].globalWeight, userCacheSize[i]);
     }
   #else
-    print_error(0, "[USER CACHE] You should define STATIC_CACHING_SPACE at parameter.h file ");
+    print_error(0, "[dynamic_caching_space.c] You should define STATIC_CACHING_SPACE at parameter.h file ");
   #endif
 
-  for (i = 0; i < NUM_OF_USER; i++) {
-    userCacheCount[i] = 0;
-  }
-  
   for (i = 0; i < SSD_CACHING_SPACE_BY_PAGES; i++) {
     ssdCache[i].pageno = i;
   }
+  freePage = 0;       //page
 
   return 0;
 }
@@ -169,15 +169,23 @@ SSD_CACHE *evict_cache_from_LRU_with_min_prize_by_user(double minPrize, unsigned
  */
 SSD_CACHE *search_cache_by_user(unsigned long diskBlk, unsigned userno) {
   unsigned unum = userno;
-    
-  unsigned long pageno;
-  for (pageno = userCacheStart[unum-1]; pageno < userCacheStart[unum-1]+userCacheSize[unum-1]; pageno++) {
-    if (ssdCache[pageno].diskBlkno == diskBlk && ssdCache[pageno].freeFlag == PAGE_FLAG_NOT_FREE) {
-      return &ssdCache[pageno];
+  SSD_CACHE *tmp;
+  tmp = cache_list[unum-1].head;
+
+  while(tmp != NULL) {
+    if(tmp->diskBlkno == diskBlk && tmp->freeFlag == PAGE_FLAG_NOT_FREE) {
+      return tmp;
     }
+    tmp = tmp->next;
   }
   
   return NULL;
+  // unsigned long pageno;
+  // for (pageno = userCacheStart[unum-1]; pageno < userCacheStart[unum-1]+userCacheSize[unum-1]; pageno++) {
+  //   if (ssdCache[pageno].diskBlkno == diskBlk && ssdCache[pageno].freeFlag == PAGE_FLAG_NOT_FREE) {
+  //     return &ssdCache[pageno];
+  //   }
+  // }
 }
 
 

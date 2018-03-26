@@ -3,13 +3,13 @@
 
 
   /*選擇SSD Cache Space管理測略(一次只能選一個)*/
-  #define STATIC_CACHING_SPACE
-  // #define DYNAMIC_CACHING_SPACE
+  // #define STATIC_CACHING_SPACE
+  #define DYNAMIC_CACHING_SPACE
   // #define COMPETITION_CACHING_SPACE
 
   /*選擇Credit管理測略(一次只能選一個)*/
-  // #define STATIC_CREDIT
-  #define DYNAMIC_CREDIT
+  #define STATIC_CREDIT
+  // #define DYNAMIC_CREDIT
 
   /*選系統是否Work conserving(預設為NON_WORK_CONSERVING)*/ 
   // #define WORK_CONSERVING
@@ -32,7 +32,7 @@
   //#define SSD_BLOCK2SECTOR (SSD_BLOCK_SIZE/DISKSIM_SECTOR)
 
 
-  #define SSD_CACHING_SPACE_BY_PAGES 1048576 	// total pages number
+  #define SSD_CACHING_SPACE_BY_PAGES 32768 	// total pages number
 	//MAX:(8*8*2048*64*8(channels) = 67108864 sectors)(67108864/PAGE2SECTOR = 8388608 pages)
   //Hint: < 6291456 page valid!
   /*
