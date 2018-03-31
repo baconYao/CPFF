@@ -433,7 +433,7 @@ void execute_CPFF_framework() {
       period_csv_statistics(&sysInfo, user, cpffSystemTime, &systemPeriodRecord, &eachUserPeriodRecord);
       second_record_statistics(&sysInfo, user, cpffSystemTime, &secondStatisticRecord);
       second_csv_statistics(&sysInfo, user, cpffSystemTime, &systemSecondRecord, &eachUserSecondRecord);
-      second_record_cache(&cacheSecondRecord);
+      second_record_cache(&cacheSecondRecord, cpffSystemTime);
       return;   //return to main()
     }
 
