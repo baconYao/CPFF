@@ -247,9 +247,9 @@ unsigned long get_cache_cnt() {
  * [寫檔至 Cache_Period_Record, 紀錄每個user每second的cache累積量(單位:page)]
  * @param {FILE*} st [寫檔Pointer]
  */
-void second_record_cache(FILE **result) {
+void second_record_cache(FILE **result, double systemTime) {
   // printf("\nCache: %f,%f\n", (double)userCacheCount[0]/(double)(SSD_CACHING_SPACE_BY_PAGES), (double)userCacheCount[1]/(double)(SSD_CACHING_SPACE_BY_PAGES));
-  fprintf(*result, "%f,%f\n", (double)userCacheCount[0]/(double)(SSD_CACHING_SPACE_BY_PAGES), (double)userCacheCount[1]/(double)(SSD_CACHING_SPACE_BY_PAGES));
+  fprintf(*result, "%f,%f,%f\n", systemTime, (double)userCacheCount[0]/(double)(SSD_CACHING_SPACE_BY_PAGES), (double)userCacheCount[1]/(double)(SSD_CACHING_SPACE_BY_PAGES));
 }
 
 /**

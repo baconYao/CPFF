@@ -472,6 +472,15 @@ void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, system
               basePrize[tmp->userno-1] = minPrize;
             #endif
 
+            meta->prize = get_prize(meta->readCnt, meta->writeCnt, meta->seqLen, tmp->userno);
+
+            //Find the minimal prize of the cached page again!
+            //Hint: Updated prize may be the minimal prize
+            minPrize = meta_block_search_by_user_with_min_prize(tmp->userno);
+            if (minPrize == -1) {
+              print_error(minPrize, "[cpff_prize_caching.c (6.1)]Something error:No caching space and no metadata with minPrize! ");
+            }
+
             //Evict the victim page with the minimal prize
             SSD_CACHE *evict;
             evict = evict_cache_from_LRU_with_min_prize_by_user(minPrize, tmp->userno, user);

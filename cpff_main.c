@@ -14,7 +14,8 @@ FILE *systemPeriodRecord;   //系統每period的記錄檔
 FILE *eachUserSecondRecord[NUM_OF_USER];   //每個user的每second記錄檔
 FILE *eachUserPeriodRecord[NUM_OF_USER];   //每個user的每period記錄檔
 FILE *finalResult;   //每個user的每period記錄檔
-FILE *cacheSecondRecord;
+FILE *cacheSecondRecord;    //每個user的每second cache記錄檔
+FILE *cachePeriodRecord;    //每個user的每period cache記錄檔
 char *par[6];         //CPFF system arguments
 int totalWeight = 0;  //所有user的global weight累加
 int shiftIdleTimeCounter = 0;     //用來處理IdleTime的計數器
@@ -167,8 +168,13 @@ void initialize(char *par[]) {
   }
 
   //Open cache period record file
-  if((cacheSecondRecord = fopen("./cpff_statistics_dir/Cache_Period_Record.csv", "w")) == NULL) {
+  if((cachePeriodRecord = fopen("./cpff_statistics_dir/Cache_Period_Record.csv", "w")) == NULL) {
     print_error(-1, "Can't open the cpff_statistics_dir/Cache_Period_Record.csv file");
+  }
+
+   //Open cache period record file
+   if((cacheSecondRecord = fopen("./cpff_statistics_dir/Cache_Second_Record.csv", "w")) == NULL) {
+    print_error(-1, "Can't open the cpff_statistics_dir/Cache_Second_Record.csv file");
   }
 
   //Open each user period record files
@@ -451,12 +457,13 @@ void execute_CPFF_framework() {
       if((int)cpffSystemTime % (STAT_FOR_TIME_PERIODS * 1000) == 0) {
         period_record_statistics(&sysInfo, user, cpffSystemTime, &periodStatisticRecord);
         period_csv_statistics(&sysInfo, user, cpffSystemTime, &systemPeriodRecord, &eachUserPeriodRecord);
+        second_record_cache(&cachePeriodRecord, cpffSystemTime);
         reset_period_value(&sysInfo, user);
       }
       /*每1000ms做的事情*/
       second_record_statistics(&sysInfo, user, cpffSystemTime, &secondStatisticRecord);
       second_csv_statistics(&sysInfo, user, cpffSystemTime, &systemSecondRecord, &eachUserSecondRecord);
-      second_record_cache(&cacheSecondRecord);
+      second_record_cache(&cacheSecondRecord, cpffSystemTime);
       reset_second_value(&sysInfo, user);
 
       

@@ -59,7 +59,7 @@
 	unsigned long get_cache_cnt();
 
 	/*紀錄每個user每second的cache累積量(單位:page)*/
-	void second_record_cache(FILE **result);
+	void second_record_cache(FILE **result, double systemTime);
 	
 	/*將SSD Page Number轉成Disksim Block(Sector)*/
 	unsigned long ssd_page_to_sim_sector(unsigned long ssdPageno);
