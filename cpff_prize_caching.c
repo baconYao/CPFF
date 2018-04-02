@@ -255,9 +255,14 @@ double meta_block_search_by_user_with_min_prize(unsigned userno) {
  * @param {userInfo *} user [all user]
  * @param {QUE *} hostQueue [hostQueue pointer]
  */
-void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, systemInfo *sysInfo) {
+void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, systemInfo *sysInfo, FILE **pcHitAccumulativeRecord) {
 
   int flag = 0;           //The flag of page
+
+  /*每隔STAT_FOR_TIME_PERIODS * cpffSystemTime記錄一次*/
+  if((int)cpffSystemTime % (STAT_FOR_TIME_PERIODS * 1000) == 0) {
+    fprintf(*pcHitAccumulativeRecord, "%lu,%lu,%f\n", pcst.hitCount, pcst.missCount, (double)pcst.hitCount/(double)(pcst.missCount+pcst.hitCount));
+  }
 
   while(1) {
 

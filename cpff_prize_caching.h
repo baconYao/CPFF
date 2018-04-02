@@ -27,6 +27,7 @@
     static int basePrize[NUM_OF_USER];
   #endif
 
+
   /*STRUCTURE DRFINITION: METADATA BLOCK*/
   typedef struct metaBlock {
     unsigned long blkno;		//以SSD Block size的Block number
@@ -95,6 +96,6 @@
   double meta_block_search_by_user_with_min_prize(unsigned userno);
 
   /*PC algorithm*/ 
-  void prize_caching(double time, userInfo *user, QUE *hostQueue, systemInfo *sysInfo);
+  void prize_caching(double time, userInfo *user, QUE *hostQueue, systemInfo *sysInfo, FILE **pcHitAccumulativeRecord);
 
 #endif

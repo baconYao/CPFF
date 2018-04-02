@@ -8,8 +8,8 @@
   // #define COMPETITION_CACHING_SPACE
 
   /*選擇Credit管理測略(一次只能選一個)*/
-  #define STATIC_CREDIT
-  // #define DYNAMIC_CREDIT
+  // #define STATIC_CREDIT
+  #define DYNAMIC_CREDIT
 
   /*選系統是否Work conserving(預設為NON_WORK_CONSERVING)*/ 
   // #define WORK_CONSERVING
@@ -54,7 +54,7 @@
 	#define SSD_N_ELEMENTS 1 //SSD Channels //No multi channel
 
   #define TIME_PERIOD 1000.0 //ms  //VSSD uses 1000.0
-  #define STAT_FOR_TIME_PERIODS 5 // 每隔幾個TIME_PERIOD記錄一次，此值也是dynamic credit的adjust period
+  #define STAT_FOR_TIME_PERIODS 3 // 每隔幾個TIME_PERIOD記錄一次，此值也是dynamic credit的adjust period
   
   /*dynamic credit*/
   #define SSD_WARM_UP_TIME STAT_FOR_TIME_PERIODS*2     //定義SSD的warm up時間 (單位:秒),請以STAT_FOR_TIME_PERIOD的倍數來選擇

@@ -7,8 +7,8 @@ pid_t SSDsimProc, HDDsimProc;     //Sub-process id: SSD and HDD simulator
 
 FILE *trace;          //讀取的trace
 FILE *param;          //paramfile
-FILE *secondStatisticRecord;     //每個second會做的記錄檔(system and all user information)
-FILE *periodStatisticRecord;     //每個period會做的記錄檔(system and all user information)
+// FILE *secondStatisticRecord;     //每個second會做的記錄檔(system and all user information)
+// FILE *periodStatisticRecord;     //每個period會做的記錄檔(system and all user information)
 FILE *systemSecondRecord;   //系統每second的記錄檔
 FILE *systemPeriodRecord;   //系統每period的記錄檔
 FILE *eachUserSecondRecord[NUM_OF_USER];   //每個user的每second記錄檔
@@ -16,6 +16,7 @@ FILE *eachUserPeriodRecord[NUM_OF_USER];   //每個user的每period記錄檔
 FILE *finalResult;   //每個user的每period記錄檔
 FILE *cacheSecondRecord;    //每個user的每second cache記錄檔
 FILE *cachePeriodRecord;    //每個user的每period cache記錄檔
+FILE *pcHitAccumulativeRecord;      //紀錄prize caching所記錄的hit ratio
 char *par[6];         //CPFF system arguments
 int totalWeight = 0;  //所有user的global weight累加
 int shiftIdleTimeCounter = 0;     //用來處理IdleTime的計數器
@@ -148,14 +149,14 @@ void initialize(char *par[]) {
   fprintf(param, "Trace: %s\n", par[0]);        //Record trace name into param file
   
   //Open period record file
-  if((periodStatisticRecord = fopen("./cpff_statistics_dir/Period_Statistic_Record.txt", "w")) == NULL) {
-    print_error(-1, "Can't open the cpff_statistics_dir/Period_Statistic_Record.txt file");
-  }
+  // if((periodStatisticRecord = fopen("./cpff_statistics_dir/Period_Statistic_Record.txt", "w")) == NULL) {
+  //   print_error(-1, "Can't open the cpff_statistics_dir/Period_Statistic_Record.txt file");
+  // }
 
   //Open second record file
-  if((secondStatisticRecord = fopen("./cpff_statistics_dir/Second_Statistic_Record.txt", "w")) == NULL) {
-    print_error(-1, "Can't open the cpff_statistics_dir/Seriod_Statistic_Record.txt file");
-  }
+  // if((secondStatisticRecord = fopen("./cpff_statistics_dir/Second_Statistic_Record.txt", "w")) == NULL) {
+  //   print_error(-1, "Can't open the cpff_statistics_dir/Seriod_Statistic_Record.txt file");
+  // }
 
   //Open system period record file
   if((systemPeriodRecord = fopen("./cpff_statistics_dir/System_Period_Record.csv", "w")) == NULL) {
@@ -172,9 +173,13 @@ void initialize(char *par[]) {
     print_error(-1, "Can't open the cpff_statistics_dir/Cache_Period_Record.csv file");
   }
 
-   //Open cache period record file
-   if((cacheSecondRecord = fopen("./cpff_statistics_dir/Cache_Second_Record.csv", "w")) == NULL) {
+  //Open cache period record file
+  if((cacheSecondRecord = fopen("./cpff_statistics_dir/Cache_Second_Record.csv", "w")) == NULL) {
     print_error(-1, "Can't open the cpff_statistics_dir/Cache_Second_Record.csv file");
+  }
+
+  if((pcHitAccumulativeRecord = fopen("./cpff_statistics_dir/PC_Record.csv", "w")) == NULL) {
+    print_error(-1, "Can't open the cpff_statistics_dir/CPC_Record.csv file");
   }
 
   //Open each user period record files
@@ -401,13 +406,11 @@ void execute_CPFF_framework() {
   double hddReqCompleteTime = hostQueue->head->r.arrivalTime;      //表示被送進HDD sim 的HDD request在系統時間(cpffSystemTime)的甚麼時候做完。 (hddReqCompleteTime = request servie time + cpffSystemTime)
   cpffSystemTime = hostQueue->head->r.arrivalTime;
   while(1) {
-    // printf("\n");
-    // print_credit(user);
     double ssdServiceTime ,hddServiceTime;
     print_progress(cpffSystemTime, sysInfo.totalReq, sysInfo.doneSsdSysReq+sysInfo.doneHddSysReq+sysInfo.doneSsdUserReq+sysInfo.doneHddUserReq, hostQueue->size);
     
     /*執行prize caching，根據系統時間(cpffSystemTime)將host queue內的request送至對應的user queue內*/ 
-    prize_caching(cpffSystemTime, user, hostQueue, &sysInfo);
+    prize_caching(cpffSystemTime, user, hostQueue, &sysInfo, &pcHitAccumulativeRecord);
   
     if(ssdReqCompleteTime == cpffSystemTime) {
       ssdReqCompleteTime = ssd_credit_scheduler(&sysInfo, user, cpffSystemTime, ssdCandidate); 
@@ -422,16 +425,13 @@ void execute_CPFF_framework() {
     if(hddReqCompleteTime < cpffSystemTime) {
       hddReqCompleteTime = cpffSystemTime;
     }
-    // printf("\nssdReqCompleteTime: %f\thddReqCompleteTime: %f\tArr time: %f\n", ssdReqCompleteTime, hddReqCompleteTime, hostQueue->head->r.arrivalTime);
-    // printf("--------------\n\n");    
-    // char c = getchar();
     
     /*All requests have been done*/
     if(is_empty_queue(hostQueue) && are_all_user_hdd_queue_empty(user) && are_all_user_ssd_queue_empty(user)) {
       /*在system要結束時(cpffSystemTime可能不會剛好是1000ms的倍數)，也必須統計結果*/
-      period_record_statistics(&sysInfo, user, cpffSystemTime, &periodStatisticRecord);
+      // period_record_statistics(&sysInfo, user, cpffSystemTime, &periodStatisticRecord);
       period_csv_statistics(&sysInfo, user, cpffSystemTime, &systemPeriodRecord, &eachUserPeriodRecord);
-      second_record_statistics(&sysInfo, user, cpffSystemTime, &secondStatisticRecord);
+      // second_record_statistics(&sysInfo, user, cpffSystemTime, &secondStatisticRecord);
       second_csv_statistics(&sysInfo, user, cpffSystemTime, &systemSecondRecord, &eachUserSecondRecord);
       second_record_cache(&cacheSecondRecord, cpffSystemTime);
       return;   //return to main()
@@ -455,13 +455,13 @@ void execute_CPFF_framework() {
 
       /*每隔STAT_FOR_TIME_PERIODS * cpffSystemTime記錄一次*/
       if((int)cpffSystemTime % (STAT_FOR_TIME_PERIODS * 1000) == 0) {
-        period_record_statistics(&sysInfo, user, cpffSystemTime, &periodStatisticRecord);
+        // period_record_statistics(&sysInfo, user, cpffSystemTime, &periodStatisticRecord);
         period_csv_statistics(&sysInfo, user, cpffSystemTime, &systemPeriodRecord, &eachUserPeriodRecord);
         second_record_cache(&cachePeriodRecord, cpffSystemTime);
         reset_period_value(&sysInfo, user);
       }
       /*每1000ms做的事情*/
-      second_record_statistics(&sysInfo, user, cpffSystemTime, &secondStatisticRecord);
+      // second_record_statistics(&sysInfo, user, cpffSystemTime, &secondStatisticRecord);
       second_csv_statistics(&sysInfo, user, cpffSystemTime, &systemSecondRecord, &eachUserSecondRecord);
       second_record_cache(&cacheSecondRecord, cpffSystemTime);
       reset_second_value(&sysInfo, user);
@@ -580,9 +580,10 @@ int main(int argc, char *argv[]) {
   //printf("Main Process waits for: %d\n", wait(NULL));
   //printf("Main Process waits for: %d\n", wait(NULL));
   
+  fclose(pcHitAccumulativeRecord);
   fclose(finalResult);
-  fclose(secondStatisticRecord);
-  fclose(periodStatisticRecord);
+  // fclose(secondStatisticRecord);
+  // fclose(periodStatisticRecord);
   fclose(systemSecondRecord);
   fclose(systemPeriodRecord);
   int i;
