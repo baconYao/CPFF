@@ -105,8 +105,10 @@
     double sysHddReqResTimeInSecond;				//All system hdd requests' response time for system in one second
     double sysHddReqResTimeInPeriod;				//All system hdd requests' response time for system in one period
     int cachingSpace;
-    QUE *ssdQueue;
-    QUE *hddQueue;
+    int comingRequestCounter;         //記錄每一period真實進入的request數量
+    QUE *hostQueue;         //User host queue
+    QUE *ssdQueue;          //User ssd queue
+    QUE *hddQueue;          //User hdd queue
   } userInfo;
 
   /*整個系統紀錄的資訊, 無視個別user*/
@@ -176,7 +178,7 @@
   /*建立device queue list*/
   QUE *build_device_queue(char *qType);
   /*將request加入到host queue tail*/
-  bool insert_req_to_host_que_tail(QUE *hostQ, REQ *r, systemInfo *sysInfo);
+  bool insert_req_to_host_que_tail(userInfo *user, REQ *r, systemInfo *sysInfo);
   /*將request加入到user queue tail*/
   bool insert_req_to_user_que_tail(userInfo *user, char *qType, REQ *r);
   /*將request加入到device queue tail*/
@@ -189,6 +191,8 @@
   void copy_req(REQ *r, REQ *copy);
   /*檢查queue是否還有request*/ 
   bool is_empty_queue(QUE *Que);
+  /*檢查所有user host queue是否還有request*/ 
+  bool are_all_user_host_queue_empty(userInfo *user);
   /*檢查所有user ssd queue是否還有request*/ 
   bool are_all_user_ssd_queue_empty(userInfo *user);
   /*檢查所有user hdd queue是否還有request*/ 

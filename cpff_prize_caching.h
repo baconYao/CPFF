@@ -96,6 +96,6 @@
   double meta_block_search_by_user_with_min_prize(unsigned userno);
 
   /*PC algorithm*/ 
-  void prize_caching(double time, userInfo *user, QUE *hostQueue, systemInfo *sysInfo, FILE **pcHitAccumulativeRecord);
+  void prize_caching(double time, userInfo *user, systemInfo *sysInfo, FILE **pcHitAccumulativeRecord);
 
 #endif

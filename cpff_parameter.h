@@ -3,8 +3,8 @@
 
 
   /*選擇SSD Cache Space管理測略(一次只能選一個)*/
-  // #define STATIC_CACHING_SPACE
-  #define DYNAMIC_CACHING_SPACE
+  #define STATIC_CACHING_SPACE
+  // #define DYNAMIC_CACHING_SPACE
   // #define COMPETITION_CACHING_SPACE
 
   /*選擇Credit管理測略(一次只能選一個)*/
@@ -31,8 +31,10 @@
   #define SSD_CHIP_XFER_LATENCY 0.000025      // unit: ms
   //#define SSD_BLOCK2SECTOR (SSD_BLOCK_SIZE/DISKSIM_SECTOR)
 
+  #define USER_SSD_QUEUE_SIZE 2
+  #define USER_HDD_QUEUE_SIZE 2
 
-  #define SSD_CACHING_SPACE_BY_PAGES 32768 	// total pages number
+  #define SSD_CACHING_SPACE_BY_PAGES 262144 	// total pages number
 	//MAX:(8*8*2048*64*8(channels) = 67108864 sectors)(67108864/PAGE2SECTOR = 8388608 pages)
   //Hint: < 6291456 page valid!
   /*
@@ -77,8 +79,8 @@
 
 	/*ipc*/
 	//One message is considered as one request. The control message is a flag which used to control simulator
-	#define KEY_MSQ_DISKSIM_1 0x0015		//The key of message queue for SSD simulator
-	#define KEY_MSQ_DISKSIM_2 0x0026		//The key of message queue for HDD simulator
+	#define KEY_MSQ_DISKSIM_1 0x0016		//The key of message queue for SSD simulator
+	#define KEY_MSQ_DISKSIM_2 0x0027		//The key of message queue for HDD simulator
 	#define MSG_TYPE_DISKSIM_1 100			//The type of message for SSD simulator
 	#define MSG_TYPE_DISKSIM_1_SERVED 101	//The type of served message for SSD simulator
 	#define MSG_TYPE_DISKSIM_2 200			//The type of message for HDD simulator

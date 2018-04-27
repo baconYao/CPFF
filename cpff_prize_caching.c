@@ -255,424 +255,442 @@ double meta_block_search_by_user_with_min_prize(unsigned userno) {
  * @param {userInfo *} user [all user]
  * @param {QUE *} hostQueue [hostQueue pointer]
  */
-void prize_caching(double cpffSystemTime, userInfo *user, QUE *hostQueue, systemInfo *sysInfo, FILE **pcHitAccumulativeRecord) {
+void prize_caching(double cpffSystemTime, userInfo *user, systemInfo *sysInfo, FILE **pcHitAccumulativeRecord) {
 
-  int flag = 0;           //The flag of page
+  int flag = 0, index;           //The flag of page
 
   /*每隔STAT_FOR_TIME_PERIODS * cpffSystemTime記錄一次*/
   if((int)cpffSystemTime % (STAT_FOR_TIME_PERIODS * 1000) == 0) {
     fprintf(*pcHitAccumulativeRecord, "%lu,%lu,%f\n", pcst.hitCount, pcst.missCount, (double)pcst.hitCount/(double)(pcst.missCount+pcst.hitCount));
   }
 
-  while(1) {
-
-    /*host queue內沒有request*/
-    if(is_empty_queue(hostQueue)) {
-      break;
-    }
-
-    /*若request的arrival time > cpffSystemTime，代表此request還沒有資格進入user queue*/
-    if(hostQueue->head->r.arrivalTime > cpffSystemTime) {
-      break;
-    }
-
-    /*從host queue head讀取欲處理的request*/ 
-    REQ *tmp;
-    tmp = calloc(1, sizeof(REQ));
-    copy_req(&(hostQueue->head->r), tmp);
-
-    /*移除host queue的head指向的request*/
-    remove_req_from_queue_head(hostQueue);
-
-    /*Check the type of user request*/
-    if (tmp->reqFlag == DISKSIM_READ) {
-      // printf(COLOR_GB"@@@@@ User %d READ req in\n"COLOR_RESET, tmp->userno);
+  /*每位user都有機會觸發caching algorithm將request送至特定的user queue*/
+  for(index = 0; index < NUM_OF_USER; index++) {
+    while(1) {
       
-      flag = PAGE_FLAG_CLEAN;
-      //Statistics
-      sysInfo->totalReq++;
-      sysInfo->userReadReqInSecond++;
-      sysInfo->userReadReqInPeriod++;
-      pcst.userReadReq++;
-      pcst.totalReq++;
-      pcst.totalUserReq++;
-      user[tmp->userno-1].totalReq++;
-      user[tmp->userno-1].totalUserReq++;
-      user[tmp->userno-1].userReadReq++;
-      user[tmp->userno-1].userReadReqInSecond++;
-      user[tmp->userno-1].userReadReqInPeriod++;
-    }
-    else {
-      // printf(COLOR_GB"@@@@@ User %d WRITE req in\n"COLOR_RESET, tmp->userno);
-      flag = PAGE_FLAG_DIRTY;
-      //Statistics
-      sysInfo->totalReq++;
-      sysInfo->userWriteReqInSecond++;
-      sysInfo->userWriteReqInPeriod++;
-      pcst.userWriteReq++;
-      pcst.totalReq++;
-      pcst.totalUserReq++;
-      user[tmp->userno-1].totalReq++;
-      user[tmp->userno-1].totalUserReq++;
-      user[tmp->userno-1].userWriteReq++; 
-      user[tmp->userno-1].userWriteReqInSecond++;
-      user[tmp->userno-1].userWriteReqInPeriod++;
-    }
-  
-    /*搜尋是否有被cache*/
-    SSD_CACHE *cache;
-    cache = search_cache_by_user(tmp->diskBlkno, tmp->userno);
-  
-    /*cache Hit: Page found in cache*/
-    if(cache != NULL) {
-      //statistics
-      // sysInfo->hitCount++;
-      // sysInfo->hitCountInSecond++;
-      // sysInfo->hitCountInPeriod++;
-      pcst.hitCount++;
-      // user[tmp->userno-1].hitCount++;
-      // user[tmp->userno-1].hitCountInSecond++;
-      // user[tmp->userno-1].hitCountInPeriod++;
-  
-      /*Add new one or update metadata(prize)*/ 
-      METABLOCK *meta;
-      meta = meta_block_search_by_user(tmp->diskBlkno, tmp->userno);
-      if(meta == NULL) {
-        meta = add_meta_block_to_table(tmp);
-      } else {
-        meta_block_update(meta, tmp);
+      /*user host queue內沒有request*/
+      if(is_empty_queue(user[index].hostQueue)) {
+        break;
       }
       
-      /*Caching*/
-      /*因為是Cache hit，所以會update cache table資訊，在此為預更新*/
-      if(insert_cache_by_user(tmp->diskBlkno, flag, tmp->userno, cpffSystemTime, meta, user) == NULL) {
-        print_error(-1, "[cpff_prize_caching.c (1)]insert_cache_by_user() error(cache hit but return full)");
+      /*若request的arrival time > cpffSystemTime，代表此request還沒有資格進入user host queue*/
+      if(user[index].hostQueue->head->r.arrivalTime > cpffSystemTime) {
+        break;
+      }
+      
+      /*限制user queue的request上限*/
+  
+      if(user[index].ssdQueue->size >= USER_SSD_QUEUE_SIZE) {
+        break;
       }
   
-      //轉換成SSD對應大小的diskBlkno
-      tmp->diskBlkno = ssd_page_to_sim_sector(cache->pageno);
-
-      //statistic
-      sysInfo->totalSsdReq++;
-      pcst.totalSsdReq++;
-      user[tmp->userno-1].totalSsdReq++;
+      /*從host queue head讀取欲處理的request*/ 
+      REQ *tmp;
+      tmp = calloc(1, sizeof(REQ));
+      copy_req(&(user[index].hostQueue->head->r), tmp);
       
-
-      /*將request 送至 user ssd queue*/ 
-      if(!insert_req_to_user_que_tail(user, "SSD", tmp)) {
-        print_error(-1, "[cpff_prize_caching.c (2)] Can't move request to user SSD queue");
-      }
-
-      // printf(COLOR_GB"@@@@@ User %d Hit\n"COLOR_RESET, tmp->userno);
-      
-
-    } else {   /*cache Miss: Page not found in cache*/  
-      //Statistics
-      // sysInfo->missCount++;
-      // sysInfo->missCountInSecond++;
-      // sysInfo->missCountInPeriod++;
-      pcst.missCount++;
-      // user[tmp->userno-1].missCount++;
-      // user[tmp->userno-1].missCountInSecond++;
-      // user[tmp->userno-1].missCountInPeriod++;
-
-      /*New or update metadata(prize)*/ 
-      METABLOCK *meta;
-      meta = meta_block_search_by_user(tmp->diskBlkno, tmp->userno);
-      if(meta == NULL) {
-        meta = add_meta_block_to_table(tmp);
-      } else {
-        meta_block_update(meta, tmp);
-      }
-
-      //Compare MIN_PRIZE and cache or not, MIN_PRIZE是系統定義的最小prize值
-      if(meta->prize >= MIN_PRIZE) {
-        // 因為cache miss，所以試著將request cache在SSD
-        cache = insert_cache_by_user(tmp->diskBlkno, flag, tmp->userno, cpffSystemTime, meta, user);
+  
+      #ifdef DYNAMIC_CACHING_SPACE
+        /*將request記錄到ghost cache*/
+        handle_coming_req(tmp->diskBlkno, tmp->userno, tmp->reqFlag);
+      #endif
+  
+      /*移除host queue的head指向的request*/
+      remove_req_from_queue_head(user[index].hostQueue);
+  
+      /*Check the type of user request*/
+      if (tmp->reqFlag == DISKSIM_READ) {
+        // printf(COLOR_GB"@@@@@ User %d READ req in\n"COLOR_RESET, tmp->userno);
         
-        //Cache is not full(no eviction)
-        if (cache != NULL) {
-          //Record seqLen in metadata table
-          meta->seqLen++;
-
-          //Read Cache Miss: 但cache is not full，所以會產生SSD Write system request
-          if(tmp->reqFlag == DISKSIM_READ) {
-            
-            // printf(COLOR_GB"@@@@@ User %d READ Miss -->SSD isn't full\n"COLOR_RESET, tmp->userno);
-            // printf(COLOR_GB"@@@@@ Generate a SSD Write system request\n"COLOR_RESET);
-
-            /*將hdd read request 送至 user hdd queue*/ 
-            if(!insert_req_to_user_que_tail(user, "HDD", tmp)) {
-              print_error(-1, "[cpff_prize_caching.c (3)] Can't move request to user HDD queue");
+        flag = PAGE_FLAG_CLEAN;
+        //Statistics
+        sysInfo->totalReq++;
+        sysInfo->userReadReqInSecond++;
+        sysInfo->userReadReqInPeriod++;
+        pcst.userReadReq++;
+        pcst.totalReq++;
+        pcst.totalUserReq++;
+        user[tmp->userno-1].totalReq++;
+        user[tmp->userno-1].totalUserReq++;
+        user[tmp->userno-1].userReadReq++;
+        user[tmp->userno-1].userReadReqInSecond++;
+        user[tmp->userno-1].userReadReqInPeriod++;
+      }
+      else {
+        // printf(COLOR_GB"@@@@@ User %d WRITE req in\n"COLOR_RESET, tmp->userno);
+        flag = PAGE_FLAG_DIRTY;
+        //Statistics
+        sysInfo->totalReq++;
+        sysInfo->userWriteReqInSecond++;
+        sysInfo->userWriteReqInPeriod++;
+        pcst.userWriteReq++;
+        pcst.totalReq++;
+        pcst.totalUserReq++;
+        user[tmp->userno-1].totalReq++;
+        user[tmp->userno-1].totalUserReq++;
+        user[tmp->userno-1].userWriteReq++; 
+        user[tmp->userno-1].userWriteReqInSecond++;
+        user[tmp->userno-1].userWriteReqInPeriod++;
+      }
+    
+      user[index].comingRequestCounter++;       //記錄每一個period進來的request
+      
+  
+      /*搜尋是否有被cache*/
+      SSD_CACHE *cache;
+      cache = search_cache_by_user(tmp->diskBlkno, tmp->userno);
+    
+      /*cache Hit: Page found in cache*/
+      if(cache != NULL) {
+        //statistics
+        // sysInfo->hitCount++;
+        // sysInfo->hitCountInSecond++;
+        // sysInfo->hitCountInPeriod++;
+        pcst.hitCount++;
+        // user[tmp->userno-1].hitCount++;
+        // user[tmp->userno-1].hitCountInSecond++;
+        // user[tmp->userno-1].hitCountInPeriod++;
+    
+        /*Add new one or update metadata(prize)*/ 
+        METABLOCK *meta;
+        meta = meta_block_search_by_user(tmp->diskBlkno, tmp->userno);
+        if(meta == NULL) {
+          meta = add_meta_block_to_table(tmp);
+        } else {
+          meta_block_update(meta, tmp);
+        }
+        
+        /*Caching*/
+        /*因為是Cache hit，所以會update cache table資訊，在此為預更新*/
+        if(insert_cache_by_user(tmp->diskBlkno, flag, tmp->userno, cpffSystemTime, meta, user) == NULL) {
+          print_error(-1, "[cpff_prize_caching.c (1)]insert_cache_by_user() error(cache hit but return full)");
+        }
+    
+        //轉換成SSD對應大小的diskBlkno
+        tmp->diskBlkno = ssd_page_to_sim_sector(cache->pageno);
+  
+        //statistic
+        sysInfo->totalSsdReq++;
+        pcst.totalSsdReq++;
+        user[tmp->userno-1].totalSsdReq++;
+        
+  
+        /*將request 送至 user ssd queue*/ 
+        if(!insert_req_to_user_que_tail(user, "SSD", tmp)) {
+          print_error(-1, "[cpff_prize_caching.c (2)] Can't move request to user SSD queue");
+        }
+  
+        // printf(COLOR_GB"@@@@@ User %d Hit\n"COLOR_RESET, tmp->userno);
+        
+  
+      } else {   /*cache Miss: Page not found in cache*/  
+        //Statistics
+        // sysInfo->missCount++;
+        // sysInfo->missCountInSecond++;
+        // sysInfo->missCountInPeriod++;
+        pcst.missCount++;
+        // user[tmp->userno-1].missCount++;
+        // user[tmp->userno-1].missCountInSecond++;
+        // user[tmp->userno-1].missCountInPeriod++;
+  
+        /*New or update metadata(prize)*/ 
+        METABLOCK *meta;
+        meta = meta_block_search_by_user(tmp->diskBlkno, tmp->userno);
+        if(meta == NULL) {
+          meta = add_meta_block_to_table(tmp);
+        } else {
+          meta_block_update(meta, tmp);
+        }
+  
+        //Compare MIN_PRIZE and cache or not, MIN_PRIZE是系統定義的最小prize值
+        if(meta->prize >= MIN_PRIZE) {
+          // 因為cache miss，所以試著將request cache在SSD
+          cache = insert_cache_by_user(tmp->diskBlkno, flag, tmp->userno, cpffSystemTime, meta, user);
+          
+          //Cache is not full(no eviction)
+          if (cache != NULL) {
+            //Record seqLen in metadata table
+            meta->seqLen++;
+  
+            //Read Cache Miss: 但cache is not full，所以會產生SSD Write system request
+            if(tmp->reqFlag == DISKSIM_READ) {
+              
+              // printf(COLOR_GB"@@@@@ User %d READ Miss -->SSD isn't full\n"COLOR_RESET, tmp->userno);
+              // printf(COLOR_GB"@@@@@ Generate a SSD Write system request\n"COLOR_RESET);
+  
+              /*將hdd read request 送至 user hdd queue*/ 
+              if(!insert_req_to_user_que_tail(user, "HDD", tmp)) {
+                print_error(-1, "[cpff_prize_caching.c (3)] Can't move request to user HDD queue");
+              }
+  
+              //產生SSD write system request
+              REQ *r;
+              r = calloc(1, sizeof(REQ));
+              copy_req(tmp, r);
+              r->isSystemRequest = 1;     // is system request
+              r->reqFlag = DISKSIM_WRITE;       // write request
+              //轉換成SSD對應大小的diskBlkno
+              r->diskBlkno = ssd_page_to_sim_sector(cache->pageno);
+  
+              /*將ssd write system request 送至 user ssd queue*/ 
+              if(!insert_req_to_user_que_tail(user, "SSD", r)) {
+                print_error(-1, "[cpff_prize_caching.c (4)] Can't move request to user SSD queue");
+              }
+  
+              free(r);
+  
+              //Statistics
+              sysInfo->totalReq++;      //for system ssd write req
+              sysInfo->totalHddReq++;       //for user hdd read req
+              sysInfo->totalSsdReq++;       //for system ssd write req
+              sysInfo->totalSysReq++;       //for system ssd write req
+              sysInfo->sysSsdWriteReq++;    //for system ssd write req
+              sysInfo->sysSsdWriteReqInSecond++;   //for system ssd write req
+              sysInfo->sysSsdWriteReqInPeriod++;   //for system ssd write req
+              pcst.totalReq++;      //for system ssd write req
+              pcst.totalHddReq++;       //for user hdd read req
+              pcst.totalSsdReq++;       //for system ssd write req
+              pcst.totalSysReq++;       //for system ssd write req
+              pcst.sysSsdWriteReq++;    //for system ssd write req
+              user[tmp->userno-1].totalReq++;   //for system ssd write req
+              user[tmp->userno-1].totalHddReq++;    //for user hdd read req
+              user[tmp->userno-1].totalSsdReq++;    //for system ssd write req
+              user[tmp->userno-1].totalSysReq++;   //for system ssd write req
+              user[tmp->userno-1].sysSsdWriteReq++;   //for system ssd write req
+              user[tmp->userno-1].sysSsdWriteReqInSecond++;   //for system ssd write req
+              user[tmp->userno-1].sysSsdWriteReqInPeriod++;   //for system ssd write req
+              
+  
+            } else {//Write Cache Miss: 但cache is not full，直接將user request送到user ssd queue   
+              //轉換成SSD對應大小的diskBlkno
+              tmp->diskBlkno = ssd_page_to_sim_sector(cache->pageno);
+              /*將ssd write system request 送至 user ssd queue*/ 
+              if(!insert_req_to_user_que_tail(user, "SSD", tmp)) {
+                print_error(-1, "[cpff_prize_caching.c (5)] Can't move request to user SSD queue");
+              }
+  
+              //Statistics
+              sysInfo->totalSsdReq++;
+              pcst.totalSsdReq++;
+              user[tmp->userno-1].totalSsdReq++;
+              
+              // printf(COLOR_GB"@@@@@ User %d WRITE Miss -->SSD isn't full\n"COLOR_RESET, tmp->userno);
+  
             }
-
-            //產生SSD write system request
-            REQ *r;
-            r = calloc(1, sizeof(REQ));
-            copy_req(tmp, r);
-            r->isSystemRequest = 1;     // is system request
-            r->reqFlag = DISKSIM_WRITE;       // write request
-            //轉換成SSD對應大小的diskBlkno
-            r->diskBlkno = ssd_page_to_sim_sector(cache->pageno);
-
-            /*將ssd write system request 送至 user ssd queue*/ 
-            if(!insert_req_to_user_que_tail(user, "SSD", r)) {
-              print_error(-1, "[cpff_prize_caching.c (4)] Can't move request to user SSD queue");
-            }
-
-            free(r);
-
-            //Statistics
-            sysInfo->totalReq++;      //for system ssd write req
-            sysInfo->totalHddReq++;       //for user hdd read req
-            sysInfo->totalSsdReq++;       //for system ssd write req
-            sysInfo->totalSysReq++;       //for system ssd write req
-            sysInfo->sysSsdWriteReq++;    //for system ssd write req
-            sysInfo->sysSsdWriteReqInSecond++;   //for system ssd write req
-            sysInfo->sysSsdWriteReqInPeriod++;   //for system ssd write req
-            pcst.totalReq++;      //for system ssd write req
-            pcst.totalHddReq++;       //for user hdd read req
-            pcst.totalSsdReq++;       //for system ssd write req
-            pcst.totalSysReq++;       //for system ssd write req
-            pcst.sysSsdWriteReq++;    //for system ssd write req
-            user[tmp->userno-1].totalReq++;   //for system ssd write req
-            user[tmp->userno-1].totalHddReq++;    //for user hdd read req
-            user[tmp->userno-1].totalSsdReq++;    //for system ssd write req
-            user[tmp->userno-1].totalSysReq++;   //for system ssd write req
-            user[tmp->userno-1].sysSsdWriteReq++;   //for system ssd write req
-            user[tmp->userno-1].sysSsdWriteReqInSecond++;   //for system ssd write req
-            user[tmp->userno-1].sysSsdWriteReqInPeriod++;   //for system ssd write req
-            
-
-          } else {//Write Cache Miss: 但cache is not full，直接將user request送到user ssd queue   
-            //轉換成SSD對應大小的diskBlkno
-            tmp->diskBlkno = ssd_page_to_sim_sector(cache->pageno);
-            /*將ssd write system request 送至 user ssd queue*/ 
-            if(!insert_req_to_user_que_tail(user, "SSD", tmp)) {
-              print_error(-1, "[cpff_prize_caching.c (5)] Can't move request to user SSD queue");
-            }
-
-            //Statistics
-            sysInfo->totalSsdReq++;
-            pcst.totalSsdReq++;
-            user[tmp->userno-1].totalSsdReq++;
-            
-            // printf(COLOR_GB"@@@@@ User %d WRITE Miss -->SSD isn't full\n"COLOR_RESET, tmp->userno);
-
-          }
-        } else { // Cache is full, 所以要比較SSD中的minimal prize value，決定是否代替(eviction)
-          //Find the minimal prize of the cached page
-          double minPrize = -1;
-          minPrize = meta_block_search_by_user_with_min_prize(tmp->userno);
-          if (minPrize == -1) {
-            print_error(minPrize, "[cpff_prize_caching.c (6)]Something error:No caching space and no metadata with minPrize! ");
-          }
-
-          //The prize of new page >= the minimal prize of the cached page,所以要剔除有minimal prize value的page
-          if (meta->prize >= minPrize) {
-            /*update Base Prize Value*/
-            #ifdef COMPETITION_CACHING_SPACE
-              basePrize = minPrize;
-            #else
-              basePrize[tmp->userno-1] = minPrize;
-            #endif
-
-            meta->prize = get_prize(meta->readCnt, meta->writeCnt, meta->seqLen, tmp->userno);
-
-            //Find the minimal prize of the cached page again!
-            //Hint: Updated prize may be the minimal prize
+          } else { // Cache is full, 所以要比較SSD中的minimal prize value，決定是否代替(eviction)
+            //Find the minimal prize of the cached page
+            double minPrize = -1;
             minPrize = meta_block_search_by_user_with_min_prize(tmp->userno);
             if (minPrize == -1) {
-              print_error(minPrize, "[cpff_prize_caching.c (6.1)]Something error:No caching space and no metadata with minPrize! ");
+              print_error(minPrize, "[cpff_prize_caching.c (6)]Something error:No caching space and no metadata with minPrize! ");
             }
-
-            //Evict the victim page with the minimal prize
-            SSD_CACHE *evict;
-            evict = evict_cache_from_LRU_with_min_prize_by_user(minPrize, tmp->userno, user);
-            if (evict == NULL) {
-              print_error(-1, "[cpff_prize_caching.c (7)]Cache eviction error: Victim not found!:");
-            }
-            // printf(COLOR_GB"@@@@@ User %d Miss -->SSD is full --> evict\n"COLOR_RESET, tmp->userno);
-            
-            //Modify metadata
-            if (evict->pcMeta == NULL) {
-              print_error(-1, "[cpff_prize_caching.c (8)]Something error: Meta. of victim not found!:");
-            }
-            evict->pcMeta->seqLen--;
-            
-            //Generate IO requests
-            //If victim page is dirty, System Read SSDsim & System Write HDDsim
-            if (evict->dirtyFlag == PAGE_FLAG_DIRTY) {
-              // printf(COLOR_GB"@@@@@ Dirty --> System Read SSDsim & System Write HDDsim\n"COLOR_RESET);
+  
+            //The prize of new page >= the minimal prize of the cached page,所以要剔除有minimal prize value的page
+            if (meta->prize >= minPrize) {
+              /*update Base Prize Value*/
+              #ifdef COMPETITION_CACHING_SPACE
+                basePrize = minPrize;
+              #else
+                basePrize[tmp->userno-1] = minPrize;
+              #endif
+  
+              meta->prize = get_prize(meta->readCnt, meta->writeCnt, meta->seqLen, tmp->userno);
+  
+              //Find the minimal prize of the cached page again!
+              //Hint: Updated prize may be the minimal prize
+              minPrize = meta_block_search_by_user_with_min_prize(tmp->userno);
+              if (minPrize == -1) {
+                print_error(minPrize, "[cpff_prize_caching.c (6.1)]Something error:No caching space and no metadata with minPrize! ");
+              }
+  
+              //Evict the victim page with the minimal prize
+              SSD_CACHE *evict;
+              evict = evict_cache_from_LRU_with_min_prize_by_user(minPrize, tmp->userno, user);
+              if (evict == NULL) {
+                print_error(-1, "[cpff_prize_caching.c (7)]Cache eviction error: Victim not found!:");
+              }
+              // printf(COLOR_GB"@@@@@ User %d Miss -->SSD is full --> evict\n"COLOR_RESET, tmp->userno);
               
-              REQ *r1, *r2;
-              r1 = calloc(1, sizeof(REQ));      //SSD read system request
-              r2 = calloc(1, sizeof(REQ));      //HDD write system request
-              copy_req(tmp, r1);
-              copy_req(tmp, r2);
-              r1->diskBlkno = ssd_page_to_sim_sector(evict->pageno);  //轉換成SSD對應大小的diskBlkno
-              r1->reqFlag = DISKSIM_READ;
-              r1->isSystemRequest = 2;
-              r2->diskBlkno = evict->diskBlkno;
-              r2->reqFlag = DISKSIM_WRITE;
-              r2->isSystemRequest = 1;
-
-              /*將ssd read system request 送至 user ssd queue*/ 
-              if(!insert_req_to_user_que_tail(user, "SSD", r1)) {
-                print_error(-1, "[cpff_prize_caching.c (9)] Can't move request to user SSD queue");
+              //Modify metadata
+              if (evict->pcMeta == NULL) {
+                print_error(-1, "[cpff_prize_caching.c (8)]Something error: Meta. of victim not found!:");
               }
-
-              /*將hdd write system request 送至 user hdd queue*/ 
-              if(!insert_req_to_user_que_tail(user, "HDD", r2)) {
-                print_error(-1, "[cpff_prize_caching.c (10)] Can't move request to user SSD queue");
-              }
-
-              //Statistics
-              sysInfo->totalReq += 2;    //for sys read ssd and sys write hdd
-              sysInfo->totalSsdReq++;    //for sys read ssd
-              sysInfo->totalHddReq++;    //for sys write hdd
-              sysInfo->totalSysReq += 2;    //for sys read ssd and sys write hdd
-              sysInfo->sysSsdReadReq++;    //for sys read ssd
-              sysInfo->sysHddWriteReq++;    //for sys write hdd
-              // sysInfo->dirtyCount++;
-              // sysInfo->dirtyCountInSecond++;
-              // sysInfo->dirtyCountInPeriod++;
-              sysInfo->sysSsdReadReqInSecond++;    //for sys read ssd
-              sysInfo->sysSsdReadReqInPeriod++;    //for sys read ssd
-              sysInfo->sysHddWriteReqInSecond++;    //for sys write hdd
-              sysInfo->sysHddWriteReqInPeriod++;    //for sys write hdd
-              pcst.totalReq += 2;    //for sys read ssd and sys write hdd
-              pcst.totalSsdReq++;    //for sys read ssd
-              pcst.totalHddReq++;    //for sys write hdd
-              pcst.totalSysReq += 2;    //for sys read ssd and sys write hdd
-              pcst.sysSsdReadReq++;    //for sys read ssd
-              pcst.sysHddWriteReq++;    //for sys write hdd
-              pcst.dirtyCount++;
-              user[tmp->userno-1].totalReq += 2;    //for sys read ssd and sys write hdd
-              user[tmp->userno-1].totalSsdReq++;    //for sys read ssd
-              user[tmp->userno-1].totalHddReq++;    //for sys write hdd
-              user[tmp->userno-1].totalSysReq += 2;   //for sys read ssd and sys write hdd
-              user[tmp->userno-1].sysSsdReadReq++;    //for sys read ssd
-              user[tmp->userno-1].sysHddWriteReq++;    //for sys write hdd
-              user[tmp->userno-1].sysSsdReadReqInSecond++;    //for sys read ssd
-              user[tmp->userno-1].sysSsdReadReqInPeriod++;    //for sys read ssd
-              user[tmp->userno-1].sysHddWriteReqInSecond++;    //for sys write hdd
-              user[tmp->userno-1].sysHddWriteReqInPeriod++;    //for sys write hdd
-              // user[tmp->userno-1].dirtyCount++;
-              // user[tmp->userno-1].dirtyCountInSecond++;
-              // user[tmp->userno-1].dirtyCountInPeriod++;
-
-              //Release request variable
-              free(r1);
-              free(r2);
-            }
-            //Statistics
-            // sysInfo->evictCount++;
-            // sysInfo->evictCountInSecond++;
-            // sysInfo->evictCountInPeriod++;
-            pcst.evictCount++;
-            // user[tmp->userno-1].evictCount++;
-            // user[tmp->userno-1].evictCountInSecond++;
-            // user[tmp->userno-1].evictCountInPeriod++;
-            
-
-            //Caching
-            /*已剔除在SSD內最小pc value的page，接著將此筆request cache在SSD內，在此為預更新*/
-            cache = insert_cache_by_user(tmp->diskBlkno, flag, tmp->userno, cpffSystemTime, meta, user);
-        
-            if(cache != NULL) {
-              //Record seqLen in metadata table
-              meta->seqLen++;
-
+              evict->pcMeta->seqLen--;
+              
               //Generate IO requests
-              //Read Miss: Read HDDsim & System Write SSDsim
-              if (tmp->reqFlag == DISKSIM_READ) {
-                REQ *r;
-                r = calloc(1, sizeof(REQ));
-                copy_req(tmp, r);
-
-                /*將hdd read request 送至 user hdd queue*/ 
-                if(!insert_req_to_user_que_tail(user, "HDD", tmp)) {
-                  print_error(-1, "[cpff_prize_caching.c (11)] Can't move request to user SSD queue");
+              //If victim page is dirty, System Read SSDsim & System Write HDDsim
+              if (evict->dirtyFlag == PAGE_FLAG_DIRTY) {
+                // printf(COLOR_GB"@@@@@ Dirty --> System Read SSDsim & System Write HDDsim\n"COLOR_RESET);
+                
+                REQ *r1, *r2;
+                r1 = calloc(1, sizeof(REQ));      //SSD read system request
+                r2 = calloc(1, sizeof(REQ));      //HDD write system request
+                copy_req(tmp, r1);
+                copy_req(tmp, r2);
+                r1->diskBlkno = ssd_page_to_sim_sector(evict->pageno);  //轉換成SSD對應大小的diskBlkno
+                r1->reqFlag = DISKSIM_READ;
+                r1->isSystemRequest = 2;
+                r2->diskBlkno = evict->diskBlkno;
+                r2->reqFlag = DISKSIM_WRITE;
+                r2->isSystemRequest = 1;
+  
+                /*將ssd read system request 送至 user ssd queue*/ 
+                if(!insert_req_to_user_que_tail(user, "SSD", r1)) {
+                  print_error(-1, "[cpff_prize_caching.c (9)] Can't move request to user SSD queue");
                 }
-
-                //System Write SSDsim
-                r->diskBlkno = ssd_page_to_sim_sector(cache->pageno);     //轉換成SSD對應大小的diskBlkno
-                r->reqFlag = DISKSIM_WRITE;
-                r->isSystemRequest = 1;
-
-                /*將ssd write system request 送至 user ssd queue*/ 
-                if(!insert_req_to_user_que_tail(user, "SSD", r)) {
-                  print_error(-1, "[cpff_prize_caching.c (12)] Can't move request to user SSD queue");
+  
+                /*將hdd write system request 送至 user hdd queue*/ 
+                if(!insert_req_to_user_que_tail(user, "HDD", r2)) {
+                  print_error(-1, "[cpff_prize_caching.c (10)] Can't move request to user SSD queue");
                 }
-                // printf(COLOR_GB"@@@@@ Then User %d READ Miss -->SSD isn't full\n"COLOR_RESET, tmp->userno);
-                // printf(COLOR_GB"@@@@@ Generate a SSD Write system request\n"COLOR_RESET);
+  
                 //Statistics
-                sysInfo->totalReq++;      //for system ssd write req
-                sysInfo->totalHddReq++;       //for user hdd read req
-                sysInfo->totalSsdReq++;       //for system ssd write req
-                sysInfo->totalSysReq++;       //for system ssd write req
-                sysInfo->sysSsdWriteReq++;    //for system ssd write req
-                sysInfo->sysSsdWriteReqInSecond++;   //for system ssd write req;
-                sysInfo->sysSsdWriteReqInPeriod++;   //for system ssd write req;
-                pcst.totalReq++;      //for system ssd write req
-                pcst.totalHddReq++;       //for user hdd read req
-                pcst.totalSsdReq++;       //for system ssd write req
-                pcst.totalSysReq++;       //for system ssd write req
-                pcst.sysSsdWriteReq++;    //for system ssd write req
-                user[tmp->userno-1].totalReq++;   //for system ssd write req
-                user[tmp->userno-1].totalHddReq++;    //for user hdd read req
-                user[tmp->userno-1].totalSsdReq++;    //for system ssd write req
-                user[tmp->userno-1].totalSysReq++;   //for system ssd write req
-                user[tmp->userno-1].sysSsdWriteReq++;   //for system ssd write req
-                user[tmp->userno-1].sysSsdWriteReqInSecond++;   //for system ssd write req;
-                user[tmp->userno-1].sysSsdWriteReqInPeriod++;   //for system ssd write req;
-
+                sysInfo->totalReq += 2;    //for sys read ssd and sys write hdd
+                sysInfo->totalSsdReq++;    //for sys read ssd
+                sysInfo->totalHddReq++;    //for sys write hdd
+                sysInfo->totalSysReq += 2;    //for sys read ssd and sys write hdd
+                sysInfo->sysSsdReadReq++;    //for sys read ssd
+                sysInfo->sysHddWriteReq++;    //for sys write hdd
+                // sysInfo->dirtyCount++;
+                // sysInfo->dirtyCountInSecond++;
+                // sysInfo->dirtyCountInPeriod++;
+                sysInfo->sysSsdReadReqInSecond++;    //for sys read ssd
+                sysInfo->sysSsdReadReqInPeriod++;    //for sys read ssd
+                sysInfo->sysHddWriteReqInSecond++;    //for sys write hdd
+                sysInfo->sysHddWriteReqInPeriod++;    //for sys write hdd
+                pcst.totalReq += 2;    //for sys read ssd and sys write hdd
+                pcst.totalSsdReq++;    //for sys read ssd
+                pcst.totalHddReq++;    //for sys write hdd
+                pcst.totalSysReq += 2;    //for sys read ssd and sys write hdd
+                pcst.sysSsdReadReq++;    //for sys read ssd
+                pcst.sysHddWriteReq++;    //for sys write hdd
+                pcst.dirtyCount++;
+                user[tmp->userno-1].totalReq += 2;    //for sys read ssd and sys write hdd
+                user[tmp->userno-1].totalSsdReq++;    //for sys read ssd
+                user[tmp->userno-1].totalHddReq++;    //for sys write hdd
+                user[tmp->userno-1].totalSysReq += 2;   //for sys read ssd and sys write hdd
+                user[tmp->userno-1].sysSsdReadReq++;    //for sys read ssd
+                user[tmp->userno-1].sysHddWriteReq++;    //for sys write hdd
+                user[tmp->userno-1].sysSsdReadReqInSecond++;    //for sys read ssd
+                user[tmp->userno-1].sysSsdReadReqInPeriod++;    //for sys read ssd
+                user[tmp->userno-1].sysHddWriteReqInSecond++;    //for sys write hdd
+                user[tmp->userno-1].sysHddWriteReqInPeriod++;    //for sys write hdd
+                // user[tmp->userno-1].dirtyCount++;
+                // user[tmp->userno-1].dirtyCountInSecond++;
+                // user[tmp->userno-1].dirtyCountInPeriod++;
+  
                 //Release request variable
-                free(r);
-              } else {      //Write Miss: Write SSDsim
-                tmp->diskBlkno = ssd_page_to_sim_sector(cache->pageno);   //轉換成SSD對應大小的diskBlkno
-
-                /*將ssd write request 送至 user ssd queue*/ 
-                if(!insert_req_to_user_que_tail(user, "SSD", tmp)) {
+                free(r1);
+                free(r2);
+              }
+              //Statistics
+              // sysInfo->evictCount++;
+              // sysInfo->evictCountInSecond++;
+              // sysInfo->evictCountInPeriod++;
+              pcst.evictCount++;
+              // user[tmp->userno-1].evictCount++;
+              // user[tmp->userno-1].evictCountInSecond++;
+              // user[tmp->userno-1].evictCountInPeriod++;
+              
+  
+              //Caching
+              /*已剔除在SSD內最小pc value的page，接著將此筆request cache在SSD內，在此為預更新*/
+              cache = insert_cache_by_user(tmp->diskBlkno, flag, tmp->userno, cpffSystemTime, meta, user);
+          
+              if(cache != NULL) {
+                //Record seqLen in metadata table
+                meta->seqLen++;
+  
+                //Generate IO requests
+                //Read Miss: Read HDDsim & System Write SSDsim
+                if (tmp->reqFlag == DISKSIM_READ) {
+                  REQ *r;
+                  r = calloc(1, sizeof(REQ));
+                  copy_req(tmp, r);
+  
+                  /*將hdd read request 送至 user hdd queue*/ 
+                  if(!insert_req_to_user_que_tail(user, "HDD", tmp)) {
+                    print_error(-1, "[cpff_prize_caching.c (11)] Can't move request to user SSD queue");
+                  }
+  
+                  //System Write SSDsim
+                  r->diskBlkno = ssd_page_to_sim_sector(cache->pageno);     //轉換成SSD對應大小的diskBlkno
+                  r->reqFlag = DISKSIM_WRITE;
+                  r->isSystemRequest = 1;
+  
+                  /*將ssd write system request 送至 user ssd queue*/ 
+                  if(!insert_req_to_user_que_tail(user, "SSD", r)) {
+                    print_error(-1, "[cpff_prize_caching.c (12)] Can't move request to user SSD queue");
+                  }
+                  // printf(COLOR_GB"@@@@@ Then User %d READ Miss -->SSD isn't full\n"COLOR_RESET, tmp->userno);
+                  // printf(COLOR_GB"@@@@@ Generate a SSD Write system request\n"COLOR_RESET);
+                  //Statistics
+                  sysInfo->totalReq++;      //for system ssd write req
+                  sysInfo->totalHddReq++;       //for user hdd read req
+                  sysInfo->totalSsdReq++;       //for system ssd write req
+                  sysInfo->totalSysReq++;       //for system ssd write req
+                  sysInfo->sysSsdWriteReq++;    //for system ssd write req
+                  sysInfo->sysSsdWriteReqInSecond++;   //for system ssd write req;
+                  sysInfo->sysSsdWriteReqInPeriod++;   //for system ssd write req;
+                  pcst.totalReq++;      //for system ssd write req
+                  pcst.totalHddReq++;       //for user hdd read req
+                  pcst.totalSsdReq++;       //for system ssd write req
+                  pcst.totalSysReq++;       //for system ssd write req
+                  pcst.sysSsdWriteReq++;    //for system ssd write req
+                  user[tmp->userno-1].totalReq++;   //for system ssd write req
+                  user[tmp->userno-1].totalHddReq++;    //for user hdd read req
+                  user[tmp->userno-1].totalSsdReq++;    //for system ssd write req
+                  user[tmp->userno-1].totalSysReq++;   //for system ssd write req
+                  user[tmp->userno-1].sysSsdWriteReq++;   //for system ssd write req
+                  user[tmp->userno-1].sysSsdWriteReqInSecond++;   //for system ssd write req;
+                  user[tmp->userno-1].sysSsdWriteReqInPeriod++;   //for system ssd write req;
+  
+                  //Release request variable
+                  free(r);
+                } else {      //Write Miss: Write SSDsim
+                  tmp->diskBlkno = ssd_page_to_sim_sector(cache->pageno);   //轉換成SSD對應大小的diskBlkno
+  
+                  /*將ssd write request 送至 user ssd queue*/ 
+                  if(!insert_req_to_user_que_tail(user, "SSD", tmp)) {
+                    print_error(-1, "[cpff_prize_caching.c (13)] Can't move request to user SSD queue");
+                  }
+                  //  printf(COLOR_GB"@@@@@Then User %d WRITE Miss -->SSD isn't full\n"COLOR_RESET, tmp->userno);
+  
+                  //Statistics
+                  sysInfo->totalSsdReq++;
+                  pcst.totalSsdReq++;
+                  user[tmp->userno-1].totalSsdReq++;
+                }
+  
+              } else {
+                print_error(-1, "[cpff_prize_caching.c (14)]After eviction, caching error! ");
+              }
+            } else {      //pc value < minPrize, 所以不cache
+              if (tmp->reqFlag == DISKSIM_READ) {
+                /*將hdd read request 送至 user ssd queue*/ 
+                if(!insert_req_to_user_que_tail(user, "HDD", tmp)) {
                   print_error(-1, "[cpff_prize_caching.c (13)] Can't move request to user SSD queue");
                 }
-                //  printf(COLOR_GB"@@@@@Then User %d WRITE Miss -->SSD isn't full\n"COLOR_RESET, tmp->userno);
-
-                //Statistics
-                sysInfo->totalSsdReq++;
-                pcst.totalSsdReq++;
-                user[tmp->userno-1].totalSsdReq++;
+                  // printf(COLOR_GB"@@@@@ User %d READ Miss --> pc value < minPrize\n"COLOR_RESET, tmp->userno);
+                
+              } else {
+                /*將hdd write request 送至 user ssd queue*/ 
+                if(!insert_req_to_user_que_tail(user, "HDD", tmp)) {
+                  print_error(-1, "[cpff_prize_caching.c (13)] Can't move request to user SSD queue");
+                }
+                  // printf(COLOR_GB"@@@@@ User %d WRITE Miss --> pc value < minPrize\n"COLOR_RESET, tmp->userno);
+                
               }
-
-            } else {
-              print_error(-1, "[cpff_prize_caching.c (14)]After eviction, caching error! ");
+              sysInfo->totalHddReq++;
+              pcst.totalHddReq++;
+              user[tmp->userno-1].totalHddReq++;
             }
-          } else {      //pc value < minPrize, 所以不cache
-            if (tmp->reqFlag == DISKSIM_READ) {
-              /*將hdd read request 送至 user ssd queue*/ 
-              if(!insert_req_to_user_que_tail(user, "HDD", tmp)) {
-                print_error(-1, "[cpff_prize_caching.c (13)] Can't move request to user SSD queue");
-              }
-                // printf(COLOR_GB"@@@@@ User %d READ Miss --> pc value < minPrize\n"COLOR_RESET, tmp->userno);
-              
-            } else {
-              /*將hdd write request 送至 user ssd queue*/ 
-              if(!insert_req_to_user_que_tail(user, "HDD", tmp)) {
-                print_error(-1, "[cpff_prize_caching.c (13)] Can't move request to user SSD queue");
-              }
-                // printf(COLOR_GB"@@@@@ User %d WRITE Miss --> pc value < minPrize\n"COLOR_RESET, tmp->userno);
-              
-            }
-            sysInfo->totalHddReq++;
-            pcst.totalHddReq++;
-            user[tmp->userno-1].totalHddReq++;
           }
         }
       }
+      //Release request variable
+      free(tmp);
     }
-    //Release request variable
-    free(tmp);
   }
 }
 

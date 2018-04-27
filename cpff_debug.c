@@ -50,7 +50,7 @@ void print_REQ(REQ *r, char* str) {
  * @param {unsigned long} currentREQ [目前數量]
  * @param {unsigned long} totalREQ [整體數量]
  */
-void print_progress(double cpffSystemTime, unsigned long totalREQ, unsigned long doneREQ, int hostQueueSize) {
-	printf ("\rCPFF System Time:%f Progress:%lu / %lu  Done: %d", cpffSystemTime, doneREQ, totalREQ, hostQueueSize);
+void print_progress(double cpffSystemTime, unsigned long totalREQ, unsigned long doneREQ) {
+	printf ("\rCPFF System Time:%f Progress:%lu / %lu", cpffSystemTime, doneREQ, totalREQ);
 	fflush (stdout);
 }

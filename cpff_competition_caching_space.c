@@ -16,7 +16,7 @@ int init_user_cache(userInfo *user, int totalWeight) {
     print_error(0, "[competition_caching_space.c] Total User Weight = ");
   }
 
-  #ifdef COMPETITION_CACHING_SPACE
+  #ifdef CPFF_COMPETITION_CACHING_SPACE
     userCacheStart[0] = 0;
     userCacheSize[0] = SSD_CACHING_SPACE_BY_PAGES;
     userFreeCount[0] = SSD_CACHING_SPACE_BY_PAGES;

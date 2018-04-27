@@ -41,36 +41,38 @@
 }
 
 /**
- * [從尾端(tail)將request放進host Queue並轉換以Page為單位的requests]
- * @param {QUE*} hostQ[整個系統的host queue]
- * @param {REQ*} r [系統定義的Req pointer]
+ * [從尾端(tail)將request放進user host Queue並轉換以Page為單位的requests]
+ * @param {userInfo *} user[整個系統的user]
+ * @param {REQ *} r [系統定義的Req pointer]
  * return true [將trace所有的reuqests放入queue後即回傳]
  */
 
-bool insert_req_to_host_que_tail(QUE *hostQ, REQ *r, systemInfo *sysInfo) {
+bool insert_req_to_host_que_tail(userInfo *user, REQ *r, systemInfo *sysInfo) {
+  unsigned userno = r->userno - 1;        //user 0 ~ n-1
+  
   /*page_count代表此request共存取多少SSD page, 意思是將request切成多個sub-requests, each sub-request size is 4 KB*/
   int page_count;
   page_count = r->reqSize/SSD_PAGE2SECTOR;
   int i;
   
   for(i = 0; i < page_count; i++) {
-    if(hostQ->head == NULL) {            //第一個request
-      hostQ->head = calloc(1, sizeof(QUE_ITEM));
-      hostQ->tail = hostQ->head;
-      copy_req(r, &(hostQ->head->r));
-      hostQ->head->r.diskBlkno += i * SSD_PAGE2SECTOR;
-      hostQ->head->r.reqSize = SSD_PAGE2SECTOR;               //4096/512 = 8 sectors
+    if(user[userno].hostQueue->head == NULL) {            //第一個request
+      user[userno].hostQueue->head = calloc(1, sizeof(QUE_ITEM));
+      user[userno].hostQueue->tail = user[userno].hostQueue->head;
+      copy_req(r, &(user[userno].hostQueue->head->r));
+      user[userno].hostQueue->head->r.diskBlkno += i * SSD_PAGE2SECTOR;
+      user[userno].hostQueue->head->r.reqSize = SSD_PAGE2SECTOR;               //4096/512 = 8 sectors
     } else {
       QUE_ITEM *tmp;
       tmp = calloc(1, sizeof(QUE_ITEM));
       copy_req(r, &(tmp->r));
       tmp->r.diskBlkno += i*SSD_PAGE2SECTOR;
       tmp->r.reqSize = SSD_PAGE2SECTOR;
-      tmp->front_req = hostQ->tail;
-      hostQ->tail->back_req = tmp;
-      hostQ->tail = tmp;
+      tmp->front_req = user[userno].hostQueue->tail;
+      user[userno].hostQueue->tail->back_req = tmp;
+      user[userno].hostQueue->tail = tmp;
     }
-    hostQ->size++;
+    user[userno].hostQueue->size++;
   }
   
   /*Statistics*/
@@ -224,6 +226,19 @@ bool is_empty_queue(QUE *Que) {
   }
 
   return true;         // queue is empty
+}
+
+/**
+ * [檢查所有的user host queue是否為空]
+ */
+ bool are_all_user_host_queue_empty(userInfo *user) {
+  int i;
+  for(i = 0; i < NUM_OF_USER; i++) {
+    if(user[i].hostQueue->size > 0) {
+      return false;
+    }
+  }
+  return true;         // all user ssd queue are empty
 }
 
 /**
