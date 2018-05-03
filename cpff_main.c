@@ -22,7 +22,7 @@ int shiftIdleTimeCounter = 0;     //用來處理IdleTime的計數器
 int ssdCandidate[NUM_OF_USER];    //在SSD scheduler決定哪個user可以dispatch request到disksim
 int hddCandidate[NUM_OF_USER];    //在HDD scheduler決定哪個user可以dispatch request到disksim
 double cpffSystemTime = 0.0;      //cpff的系統時間
-
+double adjustCacheTime = 0.0;     //Cache adjust的系統時間
 double nextReplenishCreditTime = TIME_PERIOD;    //credit重新補充的時間，每次加1000.0(ms)，預設為1000.0ms = 1 second
 
 /**
@@ -258,24 +258,28 @@ void initialize(char *par[]) {
   sysInfo.doneSsdSysReqInPeriod = 0;			
   sysInfo.doneHddSysReqInSecond = 0;			
   sysInfo.doneHddSysReqInPeriod = 0;			
+  sysInfo.doneHddSysReqInAdjustCachePeriod = 0;			
   sysInfo.doneSsdUserReq = 0;			
   sysInfo.doneHddUserReq = 0;			
   sysInfo.doneSsdUserReqInSecond = 0;			
   sysInfo.doneSsdUserReqInPeriod = 0;			
   sysInfo.doneHddUserReqInSecond = 0;			
   sysInfo.doneHddUserReqInPeriod = 0;			
+  sysInfo.doneHddUserReqInAdjustCachePeriod = 0;			
   sysInfo.userSsdReqResTime = 0.0;				    	
   sysInfo.userHddReqResTime = 0.0;				    	
   sysInfo.userSsdReqResTimeInSecond = 0.0;					    	
   sysInfo.userSsdReqResTimeInPeriod = 0.0;					    	
   sysInfo.userHddReqResTimeInSecond = 0.0;					    	
   sysInfo.userHddReqResTimeInPeriod = 0.0;					    	
+  sysInfo.userHddReqResTimeInAdjustCachePeriod = 0.0;					    	
   sysInfo.sysSsdReqResTime = 0.0;					    	
   sysInfo.sysHddReqResTime = 0.0;					    	
   sysInfo.sysSsdReqResTimeInSecond = 0.0;				
   sysInfo.sysSsdReqResTimeInPeriod = 0.0;				
   sysInfo.sysHddReqResTimeInSecond = 0.0;				
   sysInfo.sysHddReqResTimeInPeriod = 0.0;				
+  sysInfo.sysHddReqResTimeInAdjustCachePeriod = 0.0;				
 
   /*初始化user資訊*/
   unsigned weight = 0;
@@ -316,12 +320,15 @@ void initialize(char *par[]) {
     user[i].doneSsdSysReqInPeriod = 0;
     user[i].doneHddSysReqInSecond = 0;
     user[i].doneHddSysReqInPeriod = 0;
+    user[i].doneHddSysReqInAdjustCachePeriod = 0;
     user[i].doneSsdUserReq = 0;
     user[i].doneHddUserReq = 0;
     user[i].doneSsdUserReqInSecond = 0;
     user[i].doneSsdUserReqInPeriod = 0;
+    user[i].doneSsdUserReqInAdjustCachePeriod = 0;
     user[i].doneHddUserReqInSecond = 0;
     user[i].doneHddUserReqInPeriod = 0;
+    user[i].doneHddUserReqInAdjustCachePeriod = 0;
     user[i].evictCount = 0;
     user[i].evictCountInSecond = 0;
     user[i].evictCountInPeriod = 0;
@@ -340,13 +347,15 @@ void initialize(char *par[]) {
     user[i].userSsdReqResTimeInPeriod = 0.0;
     user[i].userHddReqResTimeInSecond = 0.0;
     user[i].userHddReqResTimeInPeriod = 0.0;
+    user[i].userHddReqResTimeInAdjustCachePeriod = 0.0;
     user[i].sysSsdReqResTime = 0.0;
     user[i].sysHddReqResTime = 0.0;
     user[i].sysSsdReqResTimeInSecond = 0.0;
     user[i].sysSsdReqResTimeInPeriod = 0.0;
     user[i].sysHddReqResTimeInSecond = 0.0;
     user[i].sysHddReqResTimeInPeriod = 0.0;
-    user[i].cachingSpace = 0;
+    user[i].sysHddReqResTimeInAdjustCachePeriod = 0.0;
+    user[i].pageNumberInCache = 0;
     user[i].comingRequestCounter = 0;
 
     totalWeight += weight;              //累加所有user的globalWeight
@@ -409,18 +418,13 @@ void initialize(char *par[]) {
 void execute_CPFF_framework() {
   printf("Press enter to continue program.\n");
   char c = getchar();
+  adjustCacheTime = (double)((SSD_WARM_UP_TIME + ADJUST_CACHE_TIME_PERIODS) * 1000);     //初始化cache調整的時間 
   double ssdReqCompleteTime = cpffSystemTime;      //表示被送進SSD sim 的SSD request在系統時間(cpffSystemTime)的甚麼時候做完,同時也是下個ssd request可以被服務的時間點。 (ssdReqCompleteTime = request servie time + cpffSystemTime)
   double hddReqCompleteTime = cpffSystemTime;      //表示被送進HDD sim 的HDD request在系統時間(cpffSystemTime)的甚麼時候做完,同時也是下個hdd request可以被服務的時間點。 (hddReqCompleteTime = request servie time + cpffSystemTime)
-  // cpffSystemTime = hostQueue->head->r.arrivalTime;
   while(1) {
-    // printf("\n");
-    // print_credit(user);
-    double ssdServiceTime ,hddServiceTime;
+    
     print_progress(cpffSystemTime, sysInfo.totalReq, sysInfo.doneSsdSysReq+sysInfo.doneHddSysReq+sysInfo.doneSsdUserReq+sysInfo.doneHddUserReq);
     
-    // printf("\nU1 SSD Q size: %d\t HDD Q size: %d\n", user[0].ssdQueue->size, user[0].hddQueue->size);
-    // printf("U2 SSD Q size: %d\t HDD Q size: %d\n\n", user[1].ssdQueue->size, user[1].hddQueue->size);
-
     /*執行prize caching，根據系統時間(cpffSystemTime)將user host queue內的request送至對應的user queue內*/ 
     prize_caching(cpffSystemTime, user, &sysInfo, &pcHitAccumulativeRecord);
   
@@ -441,12 +445,6 @@ void execute_CPFF_framework() {
     if(hddReqCompleteTime < cpffSystemTime) {
       hddReqCompleteTime = cpffSystemTime;
     }
-    // printf("\nssdReqCompleteTime: %f\thddReqCompleteTime: %f\n", ssdReqCompleteTime, hddReqCompleteTime);
-    // print_credit(user);
-    
-    // printf("--------------\n\n");  
-      
-    // char c = getchar();
     
     /*All requests have been done*/
     if(are_all_user_host_queue_empty(user) && are_all_user_hdd_queue_empty(user) && are_all_user_ssd_queue_empty(user)) {
@@ -467,47 +465,49 @@ void execute_CPFF_framework() {
       /*到了調整cache size的周期,則調整cache size*/
       if(cpffSystemTime == adjustCacheTime) {
         adjust_user_cache_size(user);
-        adjustCacheTime += (double)(STAT_FOR_TIME_PERIODS*1000);
+        adjustCacheTime += (double)(ADJUST_CACHE_TIME_PERIODS*1000);      //推進下次cache調整的時間
+        // printf("\nSystem Time: %f, next adjust cache time: %f\n", cpffSystemTime, adjustCacheTime);        
+        
+        /* 重置ghost cache & hash table */
+        reset_ghost_cache_and_hash_table();
+      
+        /*紀錄每個period做了多少個user request*/
+        int i;
+        for(i = 0; i < NUM_OF_USER; i++) {
+          printf(COLOR_BB"\nUser%d\tCounter: %d\n"COLOR_RESET, i+1, user[i].comingRequestCounter);
+          user[i].comingRequestCounter = 0;     //清空每一個period進來的request紀錄
+          /*reset some value*/
+          user[i].userHddReqResTimeInAdjustCachePeriod = 0.0; 
+          user[i].sysHddReqResTimeInAdjustCachePeriod = 0.0;
+          user[i].doneHddUserReqInAdjustCachePeriod = 0;
+          user[i].doneHddSysReqInAdjustCachePeriod = 0;
+          user[i].doneSsdUserReqInAdjustCachePeriod = 0;
+        }
+
         char c = getchar();
       }
     #endif
 
     /*每TIME_PERIOD(1000ms)，重新補充credit*/
     if(cpffSystemTime == nextReplenishCreditTime) {
-
-      // print_credit(user);
-      // char c = getchar();
-      // printf("U1 SSD Q size: %d\t HDD Q size: %d\n", user[0].ssdQueue->size, user[0].hddQueue->size);
-      // printf("U2 SSD Q size: %d\t HDD Q size: %d\n\n", user[1].ssdQueue->size, user[1].hddQueue->size);
       /*補充credit*/
       if(credit_replenish(user, totalWeight, cpffSystemTime) != 0) {
         print_error(-1, "Can't replenish user credit!");
       }
-      // print_credit(user);
-      // char c = getchar();
       
-
-      /*每隔STAT_FOR_TIME_PERIODS * cpffSystemTime記錄一次*/
-      if((int)cpffSystemTime % (STAT_FOR_TIME_PERIODS * 1000) == 0) {
-
-        /*紀錄每個period做了多少個user request*/
-        int i;
-        for(i = 0; i < NUM_OF_USER; i++) {
-          printf(COLOR_BB"\nUser%d\tCounter: %d\n"COLOR_RESET, i+1, user[i].comingRequestCounter);
-          // char ccc = getchar();
-          user[i].comingRequestCounter = 0;     //清空每一個period進來的request紀錄
-        }
-        period_record_statistics(&sysInfo, user, cpffSystemTime, &periodStatisticRecord);
-        period_csv_statistics(&sysInfo, user, cpffSystemTime, &systemPeriodRecord, &eachUserPeriodRecord);
-        second_record_cache(&cachePeriodRecord, cpffSystemTime);
-        reset_period_value(&sysInfo, user);
-      }
       /*每1000ms做的事情*/
       second_record_statistics(&sysInfo, user, cpffSystemTime, &secondStatisticRecord);
       second_csv_statistics(&sysInfo, user, cpffSystemTime, &systemSecondRecord, &eachUserSecondRecord);
       second_record_cache(&cacheSecondRecord, cpffSystemTime);
       reset_second_value(&sysInfo, user);
-      
+
+      /*每隔STAT_FOR_TIME_PERIODS * 1000記錄一次*/
+      if((int)cpffSystemTime % (STAT_FOR_TIME_PERIODS * 1000) == 0) {
+        period_record_statistics(&sysInfo, user, cpffSystemTime, &periodStatisticRecord);
+        period_csv_statistics(&sysInfo, user, cpffSystemTime, &systemPeriodRecord, &eachUserPeriodRecord);
+        second_record_cache(&cachePeriodRecord, cpffSystemTime);
+        reset_period_value(&sysInfo, user);
+      }
       
       nextReplenishCreditTime += TIME_PERIOD;   //推進下次補充credit的時間 (+1000ms)
     }

@@ -3,8 +3,8 @@
 
 
   /*選擇SSD Cache Space管理測略(一次只能選一個)*/
-  #define STATIC_CACHING_SPACE
-  // #define DYNAMIC_CACHING_SPACE
+  // #define STATIC_CACHING_SPACE
+  #define DYNAMIC_CACHING_SPACE
   // #define COMPETITION_CACHING_SPACE
 
   /*選擇Credit管理測略(一次只能選一個)*/
@@ -31,10 +31,17 @@
   #define SSD_CHIP_XFER_LATENCY 0.000025      // unit: ms
   //#define SSD_BLOCK2SECTOR (SSD_BLOCK_SIZE/DISKSIM_SECTOR)
 
-  #define USER_SSD_QUEUE_SIZE 2
-  #define USER_HDD_QUEUE_SIZE 2
+  #define USER_SSD_QUEUE_SIZE 2     //user ssd queue的max size
 
-  #define SSD_CACHING_SPACE_BY_PAGES 262144 	// total pages number
+  /*for dynamic caching space*/
+  #define REMAIN_PAGES 0.01  // user cache pages的最低保留數量 (1%)
+  #define INTERVAL_SPACE 0.01  // 用來取得每1% 是多少個pages (1%)
+  #define ESTIMATE_SPACE 0.1 // 當調整cache space時，用來取斜率的目標值 (10%)
+  #define TOLERANCE_VALUE 0.1  //user throughput最大可忍受的差值
+
+  /*for dynamic caching space*/
+
+  #define SSD_CACHING_SPACE_BY_PAGES 8192 	// total pages number
 	//MAX:(8*8*2048*64*8(channels) = 67108864 sectors)(67108864/PAGE2SECTOR = 8388608 pages)
   //Hint: < 6291456 page valid!
   /*
@@ -56,10 +63,11 @@
 	#define SSD_N_ELEMENTS 1 //SSD Channels //No multi channel
 
   #define TIME_PERIOD 1000.0 //ms  //VSSD uses 1000.0
-  #define STAT_FOR_TIME_PERIODS 3 // 每隔幾個TIME_PERIOD記錄一次，此值也是dynamic credit的adjust period
+  #define ADJUST_CACHE_TIME_PERIODS 9 // 每隔幾個TIME_PERIOD adjust cache size
+  #define STAT_FOR_TIME_PERIODS 3 // 每隔幾個TIME_PERIOD記錄一次
   
   /*dynamic credit*/
-  #define SSD_WARM_UP_TIME STAT_FOR_TIME_PERIODS*2     //定義SSD的warm up時間 (單位:秒),請以STAT_FOR_TIME_PERIOD的倍數來選擇
+  #define SSD_WARM_UP_TIME STAT_FOR_TIME_PERIODS*1     //定義SSD的warm up時間 (單位:秒),請以STAT_FOR_TIME_PERIOD的倍數來選擇
   // #define DONE_ALPHA 0.7
   // #define DONE_BETA 0.3
   #define MINI_CREDIT_PROPORTION 0.02     //若系統是Work conserving時，會參考此值

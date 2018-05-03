@@ -2,7 +2,7 @@
 
 
 /*[統計request完成的結果]*/
-void statistics_done_func(systemInfo *sys, userInfo *user, REQ *r, char *reqType) {
+void statistics_done_func(systemInfo *sys, userInfo *user, REQ *r, char *reqType, double systemTime) {
   if(!strcmp("SSD", reqType)) {     //ssd request
     if(r->isSystemRequest) {      //ssd system request
       sys->doneSsdSysReq++;
@@ -42,6 +42,10 @@ void statistics_done_func(systemInfo *sys, userInfo *user, REQ *r, char *reqType
       user[r->userno-1].doneSsdUserReq++;
       user[r->userno-1].doneSsdUserReqInSecond++;
       user[r->userno-1].doneSsdUserReqInPeriod++;
+      if(systemTime >= (double)SSD_WARM_UP_TIME * TIME_PERIOD) {
+        user[r->userno-1].doneSsdUserReqInAdjustCachePeriod++;
+      }
+
       sys->userSsdReqResTime += r->responseTime;
       sys->userSsdReqResTimeInSecond += r->responseTime;
       sys->userSsdReqResTimeInPeriod += r->responseTime;
@@ -72,6 +76,14 @@ void statistics_done_func(systemInfo *sys, userInfo *user, REQ *r, char *reqType
       user[r->userno-1].sysHddReqResTime += r->responseTime;
       user[r->userno-1].sysHddReqResTimeInSecond += r->responseTime;
       user[r->userno-1].sysHddReqResTimeInPeriod += r->responseTime;
+
+      if(systemTime >= (double)SSD_WARM_UP_TIME * TIME_PERIOD) {
+        sys->doneHddSysReqInAdjustCachePeriod++;
+        user[r->userno-1].doneHddSysReqInAdjustCachePeriod++;
+        sys->sysHddReqResTimeInAdjustCachePeriod += r->responseTime;
+        user[r->userno-1].sysHddReqResTimeInAdjustCachePeriod += r->responseTime;
+      }        
+
       return;
     } else {    //hdd user request
       sys->doneHddUserReq++;
@@ -86,6 +98,14 @@ void statistics_done_func(systemInfo *sys, userInfo *user, REQ *r, char *reqType
       user[r->userno-1].userHddReqResTime += r->responseTime;
       user[r->userno-1].userHddReqResTimeInSecond += r->responseTime;
       user[r->userno-1].userHddReqResTimeInPeriod += r->responseTime;
+
+      if(systemTime >= (double)SSD_WARM_UP_TIME * TIME_PERIOD) {
+        sys->doneHddUserReqInAdjustCachePeriod++;
+        user[r->userno-1].doneHddUserReqInAdjustCachePeriod++;
+        sys->userHddReqResTimeInAdjustCachePeriod += r->responseTime;
+        user[r->userno-1].userHddReqResTimeInAdjustCachePeriod += r->responseTime;
+      }        
+
       return;
     }
   }
@@ -216,19 +236,19 @@ void second_csv_statistics(systemInfo *sysInfo, userInfo *user, double systemTim
     double ssdAvgResponse, hddAvgResponse, ssdThroughput, hddThroughput, hitRate;
     ssdThroughput = ((double)sysInfo->doneSsdUserReqInSecond * 4.0 / 1024) / 1.0;
     hddThroughput = ((double)sysInfo->doneHddUserReqInSecond * 4.0 / 1024) / 1.0;
-    ssdAvgResponse = sysInfo->userSsdReqResTimeInSecond / (double)sysInfo->doneSsdUserReqInSecond;
-    hddAvgResponse = sysInfo->userHddReqResTimeInSecond / (double)sysInfo->doneHddUserReqInSecond;
-    hitRate = (double)sysInfo->hitCountInSecond / ((double)sysInfo->hitCountInSecond + (double)sysInfo->missCountInSecond);
-    fprintf(*systemSecondRecord, "%f,%f,%f,%f,%f,%f\n", systemTime, ssdThroughput, hddThroughput, ssdAvgResponse, hddAvgResponse, hitRate);
+    // ssdAvgResponse = sysInfo->userSsdReqResTimeInSecond / (double)sysInfo->doneSsdUserReqInSecond;
+    // hddAvgResponse = sysInfo->userHddReqResTimeInSecond / (double)sysInfo->doneHddUserReqInSecond;
+    hitRate = (double)sysInfo->hitCount / ((double)sysInfo->hitCount + (double)sysInfo->missCount);
+    fprintf(*systemSecondRecord, "%f,%f,%f,%f\n", systemTime, ssdThroughput, hddThroughput, hitRate);
     
     int i;
     for(i = 0; i < NUM_OF_USER; i++) {
       ssdThroughput = ((double)user[i].doneSsdUserReqInSecond * 4.0 / 1024) / 1.0;
       hddThroughput = ((double)user[i].doneHddUserReqInSecond * 4.0 / 1024) / 1.0;
-      ssdAvgResponse = user[i].userSsdReqResTimeInSecond / (double)user[i].doneSsdUserReqInSecond;
-      hddAvgResponse = user[i].userHddReqResTimeInSecond / (double)user[i].doneHddUserReqInSecond;
-      hitRate = (double)user[i].hitCountInSecond / ((double)user[i].hitCountInSecond + (double)user[i].missCountInSecond);
-      fprintf(eachUserSecondRecord[i], "%f,%f,%f,%f,%f,%f,%f,%f\n", systemTime, ssdThroughput, hddThroughput, ssdAvgResponse, hddAvgResponse, hitRate, user[i].adjustSsdCredit, user[i].adjustHddCredit);
+      // ssdAvgResponse = user[i].userSsdReqResTimeInSecond / (double)user[i].doneSsdUserReqInSecond;
+      // hddAvgResponse = user[i].userHddReqResTimeInSecond / (double)user[i].doneHddUserReqInSecond;
+      hitRate = (double)user[i].hitCount / ((double)user[i].hitCount + (double)user[i].missCount);
+      fprintf(eachUserSecondRecord[i], "%f,%f,%f,%f,%f,%f\n", systemTime, ssdThroughput, hddThroughput, hitRate, user[i].adjustSsdCredit, user[i].adjustHddCredit);
     }
     return;
   }
@@ -270,19 +290,19 @@ void period_csv_statistics(systemInfo *sysInfo, userInfo *user, double systemTim
     double ssdAvgResponse, hddAvgResponse, ssdThroughput, hddThroughput, hitRate;
     ssdThroughput = ((double)sysInfo->doneSsdUserReqInPeriod * 4.0 / 1024.0) / ((double)STAT_FOR_TIME_PERIODS * TIME_PERIOD / 1000.0);
     hddThroughput = ((double)sysInfo->doneHddUserReqInPeriod * 4.0 / 1024.0) / ((double)STAT_FOR_TIME_PERIODS * TIME_PERIOD / 1000.0);
-    ssdAvgResponse = sysInfo->userSsdReqResTimeInPeriod / (double)sysInfo->doneSsdUserReqInPeriod;
-    hddAvgResponse = sysInfo->userHddReqResTimeInPeriod / (double)sysInfo->doneHddUserReqInPeriod;
-    hitRate = (double)sysInfo->hitCountInPeriod / ((double)sysInfo->hitCountInPeriod + (double)sysInfo->missCountInPeriod);
-    fprintf(*systemPeriodRecord, "%f,%f,%f,%f,%f,%f\n", systemTime, ssdThroughput, hddThroughput, ssdAvgResponse, hddAvgResponse, hitRate);
+    // ssdAvgResponse = sysInfo->userSsdReqResTimeInPeriod / (double)sysInfo->doneSsdUserReqInPeriod;
+    // hddAvgResponse = sysInfo->userHddReqResTimeInPeriod / (double)sysInfo->doneHddUserReqInPeriod;
+    hitRate = (double)sysInfo->hitCount / ((double)sysInfo->hitCount + (double)sysInfo->missCount);
+    fprintf(*systemPeriodRecord, "%f,%f,%f,%f\n", systemTime, ssdThroughput, hddThroughput, hitRate);
     
     int i;
     for(i = 0; i < NUM_OF_USER; i++) {
       ssdThroughput = ((double)user[i].doneSsdUserReqInPeriod * 4.0 / 1024.0) / ((double)STAT_FOR_TIME_PERIODS * TIME_PERIOD / 1000.0);
       hddThroughput = ((double)user[i].doneHddUserReqInPeriod * 4.0 / 1024.0) / ((double)STAT_FOR_TIME_PERIODS * TIME_PERIOD / 1000.0);
-      ssdAvgResponse = user[i].userSsdReqResTimeInPeriod / (double)user[i].doneSsdUserReqInPeriod;
-      hddAvgResponse = user[i].userHddReqResTimeInPeriod / (double)user[i].doneHddUserReqInPeriod;
-      hitRate = (double)user[i].hitCountInPeriod / ((double)user[i].hitCountInPeriod + (double)user[i].missCountInPeriod);
-      fprintf(eachUserPeriodRecord[i], "%f,%f,%f,%f,%f,%f,%f,%f\n", systemTime, ssdThroughput, hddThroughput, ssdAvgResponse, hddAvgResponse, hitRate, user[i].adjustSsdCredit, user[i].adjustHddCredit);
+      // ssdAvgResponse = user[i].userSsdReqResTimeInPeriod / (double)user[i].doneSsdUserReqInPeriod;
+      // hddAvgResponse = user[i].userHddReqResTimeInPeriod / (double)user[i].doneHddUserReqInPeriod;
+      hitRate = (double)user[i].hitCount / ((double)user[i].hitCount + (double)user[i].missCount);
+      fprintf(eachUserPeriodRecord[i], "%f,%f,%f,%f,%f,%f\n", systemTime, ssdThroughput, hddThroughput, hitRate, user[i].adjustSsdCredit, user[i].adjustHddCredit);
     }
     return;
   }

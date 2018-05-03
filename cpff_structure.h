@@ -86,25 +86,30 @@
     unsigned long doneHddSysReq;			//紀錄已經送進HDD simulator做完的system request
     unsigned long doneHddSysReqInSecond;			//紀錄每秒已經送進HDD simulator做完的system request  
     unsigned long doneHddSysReqInPeriod;			//紀錄每period已經送進HDD simulator做完的system request 
+    unsigned long doneHddSysReqInAdjustCachePeriod;			//紀錄每adjust cache period已經送進HDD simulator做完的system request 
     unsigned long doneSsdUserReq;			//紀錄已經送進SSD simulator做完的User request
     unsigned long doneSsdUserReqInSecond;			//紀錄每秒已經送進SSD simulator做完的User request 
     unsigned long doneSsdUserReqInPeriod;			//紀錄每period已經送進SSD simulator做完的User request 
+    unsigned long doneSsdUserReqInAdjustCachePeriod;			//紀錄每adjust cache period已經送進SSD simulator做完的User request 
     unsigned long doneHddUserReq;			//紀錄已經送進HDD simulator做完的User request
     unsigned long doneHddUserReqInSecond;			//紀錄每秒已經送進HDD simulator做完的User request 
     unsigned long doneHddUserReqInPeriod;			//紀錄每period已經送進HDD simulator做完的User request 
+    unsigned long doneHddUserReqInAdjustCachePeriod;			//紀錄每adjust cache period已經送進HDD simulator做完的User request 
     double userSsdReqResTime;					    	//All user ssd requests'  response time for system
     double userSsdReqResTimeInSecond;				//All user ssd requests' response time for system in one second
     double userSsdReqResTimeInPeriod;				//All user ssd requests' response time for system in one period
     double userHddReqResTime;					    	//All user hdd requests'  response time for system
     double userHddReqResTimeInSecond;				//All user hdd requests' response time for system in one second
     double userHddReqResTimeInPeriod;				//All user hdd requests' response time for system in one period
+    double userHddReqResTimeInAdjustCachePeriod;				//All user hdd requests' response time for system in one adjust cache period
     double sysSsdReqResTime;					    	//All system ssd requests' response time for system
     double sysSsdReqResTimeInSecond;				//All system ssd requests' response time for system in one second
     double sysSsdReqResTimeInPeriod;				//All system ssd requests' response time for system in one period
     double sysHddReqResTime;					    	//All system hdd requests' response time for system
     double sysHddReqResTimeInSecond;				//All system hdd requests' response time for system in one second
     double sysHddReqResTimeInPeriod;				//All system hdd requests' response time for system in one period
-    int cachingSpace;
+    double sysHddReqResTimeInAdjustCachePeriod;				//All system hdd requests' response time for system in one period
+    unsigned long pageNumberInCache;    //此user的cache大小 (有多少個page)
     int comingRequestCounter;         //記錄每一period真實進入的request數量
     QUE *hostQueue;         //User host queue
     QUE *ssdQueue;          //User ssd queue
@@ -151,24 +156,28 @@
     unsigned long doneHddSysReq;			//紀錄已經送進HDD simulator做完的system request
     unsigned long doneHddSysReqInSecond;			//紀錄每秒已經送進HDD simulator做完的system request  
     unsigned long doneHddSysReqInPeriod;			//紀錄每period已經送進HDD simulator做完的system request 
+    unsigned long doneHddSysReqInAdjustCachePeriod;			//紀錄每adjust cache period已經送進HDD simulator做完的system request 
     unsigned long doneSsdUserReq;			//紀錄已經送進SSD simulator做完的User request
     unsigned long doneSsdUserReqInSecond;			//紀錄每秒已經送進SSD simulator做完的User request 
     unsigned long doneSsdUserReqInPeriod;			//紀錄每period已經送進SSD simulator做完的User request 
     unsigned long doneHddUserReq;			//紀錄已經送進HDD simulator做完的User request
     unsigned long doneHddUserReqInSecond;			//紀錄每秒已經送進HDD simulator做完的User request 
     unsigned long doneHddUserReqInPeriod;			//紀錄每period已經送進HDD simulator做完的User request 
+    unsigned long doneHddUserReqInAdjustCachePeriod;			//紀錄每adjust cache period已經送進HDD simulator做完的User request 
     double userSsdReqResTime;					    	//All user ssd requests'  response time for system
     double userSsdReqResTimeInSecond;				//All user ssd requests' response time for system in one second
     double userSsdReqResTimeInPeriod;				//All user ssd requests' response time for system in one period
     double userHddReqResTime;					    	//All user hdd requests'  response time for system
     double userHddReqResTimeInSecond;				//All user hdd requests' response time for system in one second
     double userHddReqResTimeInPeriod;				//All user hdd requests' response time for system in one period
+    double userHddReqResTimeInAdjustCachePeriod;				//All user hdd requests' response time for system in one adjust cache period
     double sysSsdReqResTime;					    	//All system ssd requests' response time for system
     double sysSsdReqResTimeInSecond;				//All system ssd requests' response time for system in one second
     double sysSsdReqResTimeInPeriod;				//All system ssd requests' response time for system in one period
     double sysHddReqResTime;					    	//All system hdd requests' response time for system
     double sysHddReqResTimeInSecond;				//All system hdd requests' response time for system in one second
     double sysHddReqResTimeInPeriod;				//All system hdd requests' response time for system in one period
+    double sysHddReqResTimeInAdjustCachePeriod;				//All system hdd requests' response time for system in one period
   } systemInfo;
   
   /*建立host的queue list*/

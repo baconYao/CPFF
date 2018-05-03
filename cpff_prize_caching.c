@@ -291,8 +291,11 @@ void prize_caching(double cpffSystemTime, userInfo *user, systemInfo *sysInfo, F
       
   
       #ifdef DYNAMIC_CACHING_SPACE
-        /*將request記錄到ghost cache*/
-        handle_coming_req(tmp->diskBlkno, tmp->userno, tmp->reqFlag);
+        if(cpffSystemTime >= (double)(SSD_WARM_UP_TIME*1000)) {
+          /*將request記錄到ghost cache*/
+          handle_coming_req(tmp->diskBlkno, tmp->userno, tmp->reqFlag);
+          user[index].comingRequestCounter++;       //記錄每一個adjust cache period進來的request
+        }
       #endif
   
       /*移除host queue的head指向的request*/
@@ -333,8 +336,6 @@ void prize_caching(double cpffSystemTime, userInfo *user, systemInfo *sysInfo, F
         user[tmp->userno-1].userWriteReqInPeriod++;
       }
     
-      user[index].comingRequestCounter++;       //記錄每一個period進來的request
-      
   
       /*搜尋是否有被cache*/
       SSD_CACHE *cache;

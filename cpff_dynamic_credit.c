@@ -132,8 +132,6 @@ void ssd_credit_adjust(userInfo *user) {
   user[1].adjustSsdCredit = -1000.0 * weightProprotionU1 / det;  //user2調整過後的ssd credit
   
   if(user[0].adjustSsdCredit == 0) {
-    printf("\n~~~~~~~~~~~~0000000000000000\n");
-    
     user[0].adjustSsdCredit = user[0].ssdCredit;
     user[1].adjustSsdCredit = user[1].ssdCredit;
   }
@@ -196,7 +194,6 @@ void hdd_credit_adjust(userInfo *user) {
   user[1].adjustHddCredit = -1000.0 * weightProprotionU1 / det;  //user2調整過後的hdd credit
 
   if(user[0].adjustHddCredit == 0) {
-    printf("\n0000000000000000\n");
     user[0].adjustHddCredit = user[0].hddCredit;
     user[1].adjustHddCredit = user[1].hddCredit;
   }
