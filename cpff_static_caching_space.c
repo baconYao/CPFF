@@ -85,7 +85,7 @@ SSD_CACHE *insert_cache_by_user(unsigned long diskBlk, int reqFlag, unsigned use
     //printf("cache head %lu\n", freePage);
     //Update user statistics:caching space
     // user[userno-1].cachingSpace = (double)(userCacheCount[userno-1])/(double)(SSD_CACHING_SPACE_BY_PAGES);
-    user[userno-1].cachingSpace = userCacheCount[userno-1];
+    // user[userno-1].cachingSpace = userCacheCount[userno-1];
     return &ssdCache[freePage];
   }
   else {//更新一筆資料
@@ -106,7 +106,7 @@ SSD_CACHE *insert_cache_by_user(unsigned long diskBlk, int reqFlag, unsigned use
 
     //Update user statistics:caching space
     // user[userno-1].cachingSpace = (double)(userCacheCount[userno-1])/(double)(SSD_CACHING_SPACE_BY_PAGES);
-    user[userno-1].cachingSpace = userCacheCount[userno-1];
+    // user[userno-1].cachingSpace = userCacheCount[userno-1];
     return &ssdCache[search->pageno];
   }
 }
@@ -153,7 +153,7 @@ SSD_CACHE *evict_cache_from_LRU_with_min_prize_by_user(double minPrize, unsigned
     ssdCache[minPriPageno].freeFlag = PAGE_FLAG_FREE;
     userFreeCount[unum-1]++;
     userCacheCount[ssdCache[minPriPageno].user-1]--;
-    user[ssdCache[minPriPageno].user-1].cachingSpace = (double)(userCacheCount[ssdCache[minPriPageno].user-1])/(double)(SSD_CACHING_SPACE_BY_PAGES);
+    // user[ssdCache[minPriPageno].user-1].cachingSpace = (double)(userCacheCount[ssdCache[minPriPageno].user-1])/(double)(SSD_CACHING_SPACE_BY_PAGES);
     return &ssdCache[minPriPageno];
   }
 }
