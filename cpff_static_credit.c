@@ -163,7 +163,7 @@ double ssd_credit_scheduler(systemInfo *sys, userInfo *user, double systemTime, 
   double ssdReqCompleteTime = ssdServiceTime + systemTime;   //推進下個ssd request可以做的時間
   
   //statistics
-  statistics_done_func(sys, user, tmp, "SSD");
+  statistics_done_func(sys, user, tmp, "SSD", systemTime);
 
   /*移除user ssd queue的head指向的request*/
   remove_req_from_queue_head(user[candiIndex].ssdQueue);
@@ -225,7 +225,7 @@ double hdd_credit_scheduler(systemInfo *sys, userInfo *user, double systemTime, 
   credit_compensate(user, hddServiceTime, tmp, "HDDCredit");     //進行credit的補償
   double hddReqCompleteTime = hddServiceTime + systemTime;   //推進下個hdd device queue 內 request可以做的時間
   //statistics
-  statistics_done_func(sys, user, tmp, "HDD");
+  statistics_done_func(sys, user, tmp, "HDD", systemTime);
   
   /*移除user hdd queue的head指向的request*/
   remove_req_from_queue_head(user[candiIndex].hddQueue);
