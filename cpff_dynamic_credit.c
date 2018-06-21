@@ -44,16 +44,29 @@ int init_credit(userInfo *user, int totalWeight) {
       hdd_credit_adjust(user);
       
       for(i = 0; i < NUM_OF_USER; i++) {
-        user[i].ssdCredit = user[i].adjustSsdCredit;
-        user[i].hddCredit = user[i].adjustHddCredit;
+        if(user[i].adjustSsdCredit != 0.0) {
+          user[i].ssdCredit = user[i].adjustSsdCredit;
+          user[i].prevSsdCredit = user[i].adjustSsdCredit;
+        } else {
+          user[i].ssdCredit = user[i].prevSsdCredit;
+        }
+
+        if(user[i].adjustHddCredit != 0.0) {
+          user[i].hddCredit = user[i].adjustHddCredit;
+          user[i].prevHddCredit = user[i].adjustHddCredit;      
+        } else {
+          user[i].hddCredit = user[i].prevHddCredit;
+        }       
+       
         // printf(COLOR_YB"\nAdjust U%d --> SSD: %f\tHDD: %f\n"COLOR_RESET, i, user[i].ssdCredit, user[i].hddCredit);
       }
       
       return 0;
     } else if(((int)cpffSystemTime - SSD_WARM_UP_TIME*1000)-(STAT_FOR_TIME_PERIODS*1000) > 0) {        //依照之前調整的credit量補充credit
       for(i = 0; i < NUM_OF_USER; i++) {
-        user[i].ssdCredit = user[i].adjustSsdCredit;
-        user[i].hddCredit = user[i].adjustHddCredit;
+        user[i].ssdCredit = user[i].prevSsdCredit;
+        user[i].hddCredit = user[i].prevHddCredit;
+
         // printf(COLOR_GB"\nU%d --> SSD: %f\tHDD: %f\n"COLOR_RESET, i, user[i].ssdCredit, user[i].hddCredit);
       }
       return 0;
@@ -61,6 +74,9 @@ int init_credit(userInfo *user, int totalWeight) {
       for(i = 0; i < NUM_OF_USER; i++) {      //warm up時間結束，但還不到調整credit的時間段，故此時間的credit和預設ㄧ樣
         user[i].ssdCredit = INIT_CREDIT * ((double)user[i].globalWeight/totalWeight);
         user[i].hddCredit = INIT_CREDIT * ((double)user[i].globalWeight/totalWeight);
+
+        user[i].prevSsdCredit = user[i].ssdCredit;
+        user[i].prevHddCredit = user[i].hddCredit;
         // printf(COLOR_RB"\nSS U%d --> SSD: %f\tHDD: %f\n"COLOR_RESET, i, user[i].ssdCredit, user[i].hddCredit);
       }
     }
@@ -80,7 +96,9 @@ int init_credit(userInfo *user, int totalWeight) {
  */
 void ssd_credit_adjust(userInfo *user) {
   /*若所有user ssd queue內都沒有request，則返回(代表credit的值會和上一輪調整的一樣)*/
-  if(are_all_user_ssd_queue_empty(user)) {      
+  if(are_all_user_ssd_queue_empty(user)) {
+    // user[0].adjustSsdCredit = user[0].prevSsdCredit;   
+    // user[1].adjustSsdCredit = user[1].prevSsdCredit;      
     return;
   }
 
@@ -101,6 +119,8 @@ void ssd_credit_adjust(userInfo *user) {
   /*user1 在上一輪沒有任何ssd user request被執行,則保留MINI_CREDIT_PROPORTION的credit給user1*/
   if(user[0].doneSsdUserReqInPeriod == 0) {
     #ifdef NON_WROK_CONSERVING
+      // user[0].adjustSsdCredit = user[0].prevSsdCredit;   
+      // user[1].adjustSsdCredit = user[1].prevSsdCredit;    
       return;       //依照上一輪分配，不調整ssd credit
     #elif defined WORK_CONSERVING
       user[0].adjustSsdCredit = 1000.0 * (MINI_CREDIT_PROPORTION + 0.03);  
@@ -111,6 +131,8 @@ void ssd_credit_adjust(userInfo *user) {
   /*user2 在上一輪沒有任何ssd user request被執行,則保留MINI_CREDIT_PROPORTION的credit給user2*/
   if(user[1].doneSsdUserReqInPeriod == 0) {
     #ifdef NON_WROK_CONSERVING
+      // user[0].adjustSsdCredit = user[0].prevSsdCredit;   
+      // user[1].adjustSsdCredit = user[1].prevSsdCredit;    
       return;       //依照上一輪分配，不調整ssd credit
     #elif defined WORK_CONSERVING 
       user[0].adjustSsdCredit = 1000.0 * (1.0 - (MINI_CREDIT_PROPORTION + 0.03));   
@@ -132,8 +154,8 @@ void ssd_credit_adjust(userInfo *user) {
   user[1].adjustSsdCredit = -1000.0 * weightProprotionU1 / det;  //user2調整過後的ssd credit
   
   if(user[0].adjustSsdCredit == 0) {
-    user[0].adjustSsdCredit = user[0].ssdCredit;
-    user[1].adjustSsdCredit = user[1].ssdCredit;
+    user[0].adjustSsdCredit = user[0].prevSsdCredit;
+    user[1].adjustSsdCredit = user[1].prevSsdCredit;
   }
 }
 
@@ -142,14 +164,21 @@ void ssd_credit_adjust(userInfo *user) {
  * @param {userInfo *} user [users' information]
  */
 void hdd_credit_adjust(userInfo *user) {
+  char c;
   /*若所有user hdd queue內都沒有request，則返回(代表credit的值會和上一輪調整的一樣)*/
-  if(are_all_user_hdd_queue_empty(user)) {      
+  if(are_all_user_hdd_queue_empty(user)) {
+    // user[0].adjustHddCredit = user[0].prevHddCredit;   
+    // user[1].adjustHddCredit = user[1].prevHddCredit; 
+    // printf(COLOR_GB"\n111\n"COLOR_RESET);   
+    // c = getchar();
     return;
   }
   /*user1沒有做任何hdd request(user or system request)，且user1 hdd queue內也沒有任何request，代表此user1很有可能已經做完所有request*/
   if(user[0].doneHddUserReqInPeriod == 0 && user[0].doneHddSysReqInPeriod == 0 && is_empty_queue(user[0].hddQueue)) {
     user[0].adjustHddCredit = 1000.0 * MINI_CREDIT_PROPORTION;  
-    user[1].adjustHddCredit = 1000.0 * (1.0 - MINI_CREDIT_PROPORTION); 
+    user[1].adjustHddCredit = 1000.0 * (1.0 - MINI_CREDIT_PROPORTION);
+    // printf(COLOR_GB"\n222\n"COLOR_RESET);       
+    // c = getchar();
     return; 
   }
 
@@ -157,14 +186,25 @@ void hdd_credit_adjust(userInfo *user) {
   if(user[1].doneHddUserReqInPeriod == 0 && user[1].doneHddSysReqInPeriod == 0 && is_empty_queue(user[1].hddQueue)) {
     user[0].adjustHddCredit = 1000.0 * (1.0 - MINI_CREDIT_PROPORTION);   
     user[1].adjustHddCredit = 1000.0 * MINI_CREDIT_PROPORTION;  
+    // printf(COLOR_GB"\n333\n"COLOR_RESET);       
+    // c = getchar();
+    
     return; 
   }
 
   /*user1 在上一輪沒有任何hdd user request被執行,則保留MINI_CREDIT_PROPORTION的credit給user1*/
   if(user[0].doneHddUserReqInPeriod == 0) {
     #ifdef NON_WROK_CONSERVING
+      // user[0].adjustHddCredit = user[0].prevHddCredit;   
+      // user[1].adjustHddCredit = user[1].prevHddCredit; 
+      // printf(COLOR_GB"\n444\n"COLOR_RESET);       
+      // c = getchar();
+      
       return;       //依照上一輪分配，不調整hdd credit
     #elif defined WORK_CONSERVING
+      // printf(COLOR_GB"\n555\n"COLOR_RESET);       
+      // c = getchar();
+      
       user[0].adjustHddCredit = 1000.0 * (MINI_CREDIT_PROPORTION + 0.03);  
       user[1].adjustHddCredit = 1000.0 * (1.0 - (MINI_CREDIT_PROPORTION + 0.03)); 
       return; 
@@ -172,9 +212,18 @@ void hdd_credit_adjust(userInfo *user) {
   }
   /*user2 在上一輪沒有任何hdd user request被執行,則保留MINI_CREDIT_PROPORTION的credit給user2*/
   if(user[1].doneHddUserReqInPeriod == 0) {
+    
     #ifdef NON_WROK_CONSERVING
+      // user[0].adjustHddCredit = user[0].prevHddCredit;   
+      // user[1].adjustHddCredit = user[1].prevHddCredit; 
+      // printf(COLOR_GB"\n666\n"COLOR_RESET);       
+      // c = getchar();
+      
       return;       //依照上一輪分配，不調整hdd credit
     #elif defined WORK_CONSERVING 
+      // printf(COLOR_GB"\n777\n"COLOR_RESET);       
+      // c = getchar();
+      
       user[0].adjustHddCredit = 1000.0 * (1.0 - (MINI_CREDIT_PROPORTION + 0.03));   
       user[1].adjustHddCredit = 1000.0 * (MINI_CREDIT_PROPORTION + 0.03);  
       return;
@@ -194,9 +243,15 @@ void hdd_credit_adjust(userInfo *user) {
   user[1].adjustHddCredit = -1000.0 * weightProprotionU1 / det;  //user2調整過後的hdd credit
 
   if(user[0].adjustHddCredit == 0) {
-    user[0].adjustHddCredit = user[0].hddCredit;
-    user[1].adjustHddCredit = user[1].hddCredit;
+    // printf(COLOR_GB"\n888\n"COLOR_RESET);       
+    // c = getchar();
+    
+    user[0].adjustHddCredit = user[0].prevHddCredit;
+    user[1].adjustHddCredit = user[1].prevHddCredit;
   }
+  // printf("\nC1: %f\tC2: %f\n",user[0].adjustHddCredit, user[1].adjustHddCredit);
+  // printf(COLOR_GB"\n999\n"COLOR_RESET);       
+  // c = getchar();
 }
 
 /**

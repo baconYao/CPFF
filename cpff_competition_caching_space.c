@@ -47,7 +47,7 @@ int init_user_cache(userInfo *user, int totalWeight) {
  * @return {int} 0/-1 [FULL(-1) or not(0)]
  */
  SSD_CACHE *insert_cache_by_user(unsigned long diskBlk, int reqFlag, unsigned userno, double time, struct metaBlock *meta, userInfo *user) {
-  #ifdef CPFF_COMPETITION_CACHING_SPACE
+  #ifdef CPFF_COMPETITION_CACHING_SPACE_H
     unsigned unum = 1;
   #endif
   
@@ -77,7 +77,7 @@ int init_user_cache(userInfo *user, int totalWeight) {
 
     //printf("cache head %lu\n", freePage);
     //Update user statistics:caching space
-    user[userno-1].cachingSpace = (double)(userCacheCount[userno-1])/(double)(SSD_CACHING_SPACE_BY_PAGES);
+    // user[userno-1].cachingSpace = (double)(userCacheCount[userno-1])/(double)(SSD_CACHING_SPACE_BY_PAGES);
     return &ssdCache[freePage];
   }
   else {//更新一筆資料
@@ -97,7 +97,7 @@ int init_user_cache(userInfo *user, int totalWeight) {
     ssdCache[search->pageno].accessTime = time;
 
     //Update user statistics:caching space
-    user[userno-1].cachingSpace = (double)(userCacheCount[userno-1])/(double)(SSD_CACHING_SPACE_BY_PAGES);
+    // user[userno-1].cachingSpace = (double)(userCacheCount[userno-1])/(double)(SSD_CACHING_SPACE_BY_PAGES);
     return &ssdCache[search->pageno];
   }
 }
@@ -110,7 +110,7 @@ int init_user_cache(userInfo *user, int totalWeight) {
  * @return {SSD_CACHE*} &ssdCache/NULL [回傳欲剔除的cached page;NULL:未找到]
  */
 SSD_CACHE *evict_cache_from_LRU_with_min_prize_by_user(double minPrize, unsigned userno, userInfo *user) {
-  #ifdef CPFF_COMPETITION_CACHING_SPACE
+  #ifdef CPFF_COMPETITION_CACHING_SPACE_H
     unsigned unum = 1;
   #endif
     
@@ -146,7 +146,7 @@ SSD_CACHE *evict_cache_from_LRU_with_min_prize_by_user(double minPrize, unsigned
     ssdCache[minPriPageno].freeFlag = PAGE_FLAG_FREE;
     userFreeCount[unum-1]++;
     userCacheCount[ssdCache[minPriPageno].user-1]--;
-    user[ssdCache[minPriPageno].user-1].cachingSpace = (double)(userCacheCount[ssdCache[minPriPageno].user-1])/(double)(SSD_CACHING_SPACE_BY_PAGES);
+    // user[ssdCache[minPriPageno].user-1].cachingSpace = (double)(userCacheCount[ssdCache[minPriPageno].user-1])/(double)(SSD_CACHING_SPACE_BY_PAGES);
     return &ssdCache[minPriPageno];
   }
 }
@@ -158,7 +158,7 @@ SSD_CACHE *evict_cache_from_LRU_with_min_prize_by_user(double minPrize, unsigned
  * @return {SSD_CACHE*} &ssdCache/NULL [回傳欲搜尋的cached page;NULL:未找到]
  */
 SSD_CACHE *search_cache_by_user(unsigned long diskBlk, unsigned userno) {
-  #ifdef CPFF_COMPETITION_CACHING_SPACE
+  #ifdef CPFF_COMPETITION_CACHING_SPACE_H
     unsigned unum = 1;
   #endif  
     
@@ -180,7 +180,7 @@ SSD_CACHE *search_cache_by_user(unsigned long diskBlk, unsigned userno) {
  * @return CACHE_FULL/CACHE_NOT_FULL [Full:1; Not full:0]
  */
 int is_full_cache_by_user(unsigned userno) {
-  #ifdef CPFF_COMPETITION_CACHING_SPACE
+  #ifdef CPFF_COMPETITION_CACHING_SPACE_H
     unsigned unum = 1;
   #endif
 
@@ -198,7 +198,7 @@ int is_full_cache_by_user(unsigned userno) {
  * @return {unsigned long} pageno [Page Number]
  */
 unsigned long get_free_cache_by_user(unsigned userno) {
-  #ifdef CPFF_COMPETITION_CACHING_SPACE
+  #ifdef CPFF_COMPETITION_CACHING_SPACE_H
     unsigned unum = 1;
   #endif
   unsigned long pageno;

@@ -291,6 +291,8 @@ void initialize(char *par[]) {
     user[i].adjustSsdCredit = 0.0;
     user[i].hddCredit = 0.0;
     user[i].adjustHddCredit = 0.0;
+    user[i].prevSsdCredit = 0.0;
+    user[i].prevHddCredit = 0.0;
     user[i].hostQueue = build_host_queue();    //建立user host queue
     user[i].ssdQueue = build_user_queue(i+1, "SSD");    //建立user ssd queue
     user[i].hddQueue = build_user_queue(i+1, "HDD");    //建立user hdd queue
@@ -503,6 +505,8 @@ void execute_CPFF_framework() {
 
       /*每隔STAT_FOR_TIME_PERIODS * 1000記錄一次*/
       if((int)cpffSystemTime % (STAT_FOR_TIME_PERIODS * 1000) == 0) {
+        // print_credit(user);
+        // c = getchar();
         period_record_statistics(&sysInfo, user, cpffSystemTime, &periodStatisticRecord);
         period_csv_statistics(&sysInfo, user, cpffSystemTime, &systemPeriodRecord, &eachUserPeriodRecord);
         second_record_cache(&cachePeriodRecord, cpffSystemTime);
@@ -534,6 +538,21 @@ double shift_cpffSystemTime(double ssdReqCompleteTime, double hddReqCompleteTime
     }
   }
 
+  if(are_all_user_ssd_queue_empty(user) && are_all_user_hdd_queue_empty(user)) {
+    if(!are_all_user_host_queue_empty(user)) {
+      int i;
+      for(i = 0; i < NUM_OF_USER; i++) {
+        if(!is_empty_queue(&user[i].hostQueue)) {
+          if(minimal > user[i].hostQueue->head->r.arrivalTime) {
+            // printf("\nnext Time: %f\n", user[i].hostQueue->head->r.arrivalTime);
+            // char c = getchar();
+            minimal = user[i].hostQueue->head->r.arrivalTime;
+          }
+        }
+      }
+    }
+  }
+
   /*處理Idle Time情況*/
   if(minimal == cpffSystemTime) {
     shiftIdleTimeCounter++;
@@ -542,7 +561,7 @@ double shift_cpffSystemTime(double ssdReqCompleteTime, double hddReqCompleteTime
       // printf("\n\nShift Idle Time\n\n");
       // char c = getchar();
       int arrValidElement = 3;
-      double arr[4];
+      double arr[3];
       arr[0] = nextReplenishCreditTime - cpffSystemTime;
       arr[1] = ssdReqCompleteTime - cpffSystemTime;
       arr[2] = hddReqCompleteTime - cpffSystemTime;

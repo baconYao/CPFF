@@ -48,6 +48,8 @@
     double adjustSsdCredit;   //調整過後的ssd credit，會在一定時間內持續使用 (此值適用在dynamic credit adjustment policy)
     double hddCredit;   //當前的hdd credit
     double adjustHddCredit;   //調整過後的hdd credit，會在一定時間內持續使用 (此值適用在dynamic credit adjustment policy)
+    double prevSsdCredit;
+    double prevHddCredit;
     unsigned long totalReq;		//Request數量 (include user and system request)
     unsigned long totalSsdReq;		//SSD Request數量 (include user and system ssd request)
     unsigned long totalHddReq;		//HDD Request數量 (include user and system hdd request)
