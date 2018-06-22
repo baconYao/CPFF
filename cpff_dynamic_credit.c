@@ -15,6 +15,8 @@ int init_credit(userInfo *user, int totalWeight) {
   for(i = 0; i < NUM_OF_USER; i++) {
     user[i].ssdCredit = INIT_CREDIT * ((double)user[i].globalWeight/totalWeight);
     user[i].hddCredit = INIT_CREDIT * ((double)user[i].globalWeight/totalWeight);
+    user[i].prevSsdCredit = user[i].ssdCredit;
+    user[i].prevHddCredit = user[i].hddCredit;
   }
 
   //User credit output
@@ -47,10 +49,10 @@ int init_credit(userInfo *user, int totalWeight) {
         if(user[i].adjustSsdCredit != 0.0) {
           user[i].ssdCredit = user[i].adjustSsdCredit;
           user[i].prevSsdCredit = user[i].adjustSsdCredit;
+
         } else {
           user[i].ssdCredit = user[i].prevSsdCredit;
         }
-
         if(user[i].adjustHddCredit != 0.0) {
           user[i].hddCredit = user[i].adjustHddCredit;
           user[i].prevHddCredit = user[i].adjustHddCredit;      
@@ -97,6 +99,7 @@ int init_credit(userInfo *user, int totalWeight) {
 void ssd_credit_adjust(userInfo *user) {
   /*若所有user ssd queue內都沒有request，則返回(代表credit的值會和上一輪調整的一樣)*/
   if(are_all_user_ssd_queue_empty(user)) {
+    // printf("\n1111\n");
     // user[0].adjustSsdCredit = user[0].prevSsdCredit;   
     // user[1].adjustSsdCredit = user[1].prevSsdCredit;      
     return;
@@ -106,6 +109,8 @@ void ssd_credit_adjust(userInfo *user) {
   if(user[0].doneSsdUserReqInPeriod == 0 && user[0].doneSsdSysReqInPeriod == 0 && is_empty_queue(user[0].ssdQueue)) {
     user[0].adjustSsdCredit = 1000.0 * MINI_CREDIT_PROPORTION;  
     user[1].adjustSsdCredit = 1000.0 * (1.0 - MINI_CREDIT_PROPORTION); 
+    // printf("\n222\n");
+
     return; 
   }
 
@@ -113,12 +118,16 @@ void ssd_credit_adjust(userInfo *user) {
   if(user[1].doneSsdUserReqInPeriod == 0 && user[1].doneSsdSysReqInPeriod == 0 && is_empty_queue(user[1].ssdQueue)) {
     user[0].adjustSsdCredit = 1000.0 * (1.0 - MINI_CREDIT_PROPORTION);   
     user[1].adjustSsdCredit = 1000.0 * MINI_CREDIT_PROPORTION;  
+    // printf("\n333\n");
+    
     return; 
   }
 
   /*user1 在上一輪沒有任何ssd user request被執行,則保留MINI_CREDIT_PROPORTION的credit給user1*/
   if(user[0].doneSsdUserReqInPeriod == 0) {
     #ifdef NON_WROK_CONSERVING
+      // printf("\n444\n");
+
       // user[0].adjustSsdCredit = user[0].prevSsdCredit;   
       // user[1].adjustSsdCredit = user[1].prevSsdCredit;    
       return;       //依照上一輪分配，不調整ssd credit
@@ -131,6 +140,8 @@ void ssd_credit_adjust(userInfo *user) {
   /*user2 在上一輪沒有任何ssd user request被執行,則保留MINI_CREDIT_PROPORTION的credit給user2*/
   if(user[1].doneSsdUserReqInPeriod == 0) {
     #ifdef NON_WROK_CONSERVING
+      // printf("\n555\n");
+
       // user[0].adjustSsdCredit = user[0].prevSsdCredit;   
       // user[1].adjustSsdCredit = user[1].prevSsdCredit;    
       return;       //依照上一輪分配，不調整ssd credit
@@ -156,7 +167,10 @@ void ssd_credit_adjust(userInfo *user) {
   if(user[0].adjustSsdCredit == 0) {
     user[0].adjustSsdCredit = user[0].prevSsdCredit;
     user[1].adjustSsdCredit = user[1].prevSsdCredit;
+    // printf("\n666\n");
   }
+    // printf("\n777\n");
+
 }
 
 /**
